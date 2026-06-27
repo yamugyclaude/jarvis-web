@@ -202,9 +202,12 @@
   <!-- 장소 기록 -->
   <div class="card">
     <h2>장소 기록</h2>
+    <div id="nearHint" style="display:none;margin-bottom:8px;font-size:13px;cursor:pointer;
+      padding:8px 12px;border:1.5px dashed var(--arrive);border-radius:var(--input-radius);
+      color:var(--arrive);" onclick="acceptNear()"></div>
     <div class="row" style="position:relative;">
       <input type="text" id="placeInput" placeholder="장소 이름 (예: 신혜식당)" autocomplete="off"
-        oninput="onPlaceInput()" onkeydown="onPlaceKey(event)">
+        oninput="onPlaceInput()" onkeydown="onPlaceKey(event)" onfocus="checkNearby()">
       <div id="placeDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;
         background:var(--card);border:1.5px solid var(--border);border-radius:var(--input-radius);
         z-index:50;max-height:180px;overflow-y:auto;margin-top:2px;"></div>
@@ -397,14 +400,50 @@ async function loadPlacesFromGitHub() {
 let _pendingPlace = '';
 let _selectedCat = '';
 
-function sendPlace() {
+// ── GPS ──────────────────────────────────────────────────
+function getGPS() {
+  return new Promise(resolve => {
+    if (!navigator.geolocation) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      ()  => resolve(null),
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+    );
+  });
+}
+
+// 두 좌표 간 거리(m) — haversine
+function distM(a, b) {
+  const R = 6371000, toR = d => d * Math.PI / 180;
+  const dLat = toR(b.lat - a.lat), dLng = toR(b.lng - a.lng);
+  const x = Math.sin(dLat/2)**2 +
+    Math.cos(toR(a.lat)) * Math.cos(toR(b.lat)) * Math.sin(dLng/2)**2;
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+
+// 현재 위치 기준 가장 가까운(반경 내) 저장 장소
+function nearestPlace(gps, radius = 80) {
+  if (!gps) return null;
+  let best = null, bestD = radius;
+  for (const [name, p] of Object.entries(_placeDB)) {
+    if (typeof p.lat !== 'number' || typeof p.lng !== 'number') continue;
+    const d = distM(gps, { lat: p.lat, lng: p.lng });
+    if (d <= bestD) { bestD = d; best = { name, dist: Math.round(d) }; }
+  }
+  return best;
+}
+
+async function sendPlace() {
   const place = document.getElementById('placeInput').value.trim();
   if (!place) { showResult('⚠️ 장소 이름을 입력하세요.', false); return; }
   closePlaceDropdown();
   const db = getPlaceDB();
   if (db[place]) {
-    // 기존 저장 장소 → 바로 기록
-    dispatch({ place });
+    // 기존 저장 장소 → GPS 첨부해 바로 기록
+    const gps = await getGPS();
+    const inputs = { place };
+    if (gps) { inputs.lat = String(gps.lat); inputs.lng = String(gps.lng); }
+    dispatch(inputs);
     document.getElementById('placeInput').value = '';
   } else {
     // 신규 장소 → 카테고리 팝업
@@ -457,17 +496,22 @@ function closeCatPopup() {
   _pendingPlace = '';
 }
 
-function confirmCategory() {
+async function confirmCategory() {
   if (!_pendingPlace) return;
   const cat = _selectedCat || '기타';
+  const place = _pendingPlace;
+  document.getElementById('catOverlay').classList.remove('show');
+  _pendingPlace = '';
+  const gps = await getGPS();
   const db = getPlaceDB();
   // 낙관적 반영 (Actions가 places.json 갱신할 때까지 시간차 보완)
-  db[_pendingPlace] = { cat, created_at: new Date().toISOString() };
+  db[place] = { cat, lat: gps ? gps.lat : null, lng: gps ? gps.lng : null,
+    created_at: new Date().toISOString() };
   savePlaceDB(db);
-  document.getElementById('catOverlay').classList.remove('show');
-  dispatch({ place: _pendingPlace, category: cat });
+  const inputs = { place, category: cat };
+  if (gps) { inputs.lat = String(gps.lat); inputs.lng = String(gps.lng); }
+  dispatch(inputs);
   document.getElementById('placeInput').value = '';
-  _pendingPlace = '';
 }
 
 // 클릭 바깥 → 닫기
@@ -500,6 +544,24 @@ function onPlaceInput() {
 function onPlaceKey(e) {
   if (e.key === 'Enter') { sendPlace(); }
   if (e.key === 'Escape') { closePlaceDropdown(); }
+}
+
+// 입력칸 포커스 → 현재 위치 근처 저장 장소 제안
+let _nearName = '';
+async function checkNearby() {
+  if (document.getElementById('placeInput').value.trim()) return;
+  const hint = document.getElementById('nearHint');
+  const gps = await getGPS();
+  const near = nearestPlace(gps);
+  if (!near) { hint.style.display = 'none'; _nearName = ''; return; }
+  _nearName = near.name;
+  hint.textContent = `📍 여기 "${near.name}" 이죠? (약 ${near.dist}m) — 눌러서 입력`;
+  hint.style.display = 'block';
+}
+function acceptNear() {
+  if (!_nearName) return;
+  document.getElementById('placeInput').value = _nearName;
+  document.getElementById('nearHint').style.display = 'none';
 }
 
 function selectPlace(name) {
