@@ -779,6 +779,7 @@ async function viewDiary(offset) {
       headers: { 'Authorization': `token ${getToken().replace(/[^\x20-\x7E]/g,'')}`, 'Accept': 'application/vnd.github+json' }
     });
     if (!res.ok) {
+      _diaryFileSha = ''; _diaryRawText = ''; _diaryFileUrl = '';
       document.getElementById('diaryTimeline').innerHTML = res.status === 404
         ? '<p style="color:var(--text2);font-size:13px;">📭 기록 없음</p>'
         : `<p style="color:var(--err-text);font-size:13px;">오류 ${res.status}</p>`;
