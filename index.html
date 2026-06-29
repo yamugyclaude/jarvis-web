@@ -171,8 +171,11 @@
 
   <!-- 헤더 -->
   <div class="header">
-    <h1>🤖 자비스 기록<span class="ver">v2026.06.27.1</span></h1>
-    <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">DOS</button>
+    <h1>🤖 자비스 기록<span class="ver">v2026.06.27.2</span></h1>
+    <div style="display:flex;gap:6px;">
+      <button class="theme-btn" onclick="changeToken()" id="tokenBtn">🔑 토큰</button>
+      <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">DOS</button>
+    </div>
   </div>
 
   <!-- 토큰 배너 -->
@@ -328,6 +331,14 @@ function checkToken() {
   if (getToken()) { document.getElementById('tokenBanner').style.display = 'none'; return true; }
   showResult('⚠️ 먼저 GitHub 토큰을 입력해주세요.', false);
   return false;
+}
+function changeToken() {
+  const banner = document.getElementById('tokenBanner');
+  banner.style.display = 'block';
+  const input = document.getElementById('tokenInput');
+  input.value = getToken();
+  banner.scrollIntoView({ behavior: 'smooth' });
+  input.focus();
 }
 
 // ── 테마 ──────────────────────────────────────────────────
