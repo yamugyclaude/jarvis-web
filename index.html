@@ -816,11 +816,11 @@ function renderDiaryMeta(fm) {
     { field: 'energy',    icon: '⚡', label: '에너지' },
     { field: 'mood',      icon: '😊', label: '기분' },
   ];
-  const parts = EDITABLE
-    .filter(e => fm[e.field] && fm[e.field] !== '""')
-    .map(e => `<span class="meta-editable" data-field="${e.field}" data-value="${fm[e.field]}" onclick="startMetaEdit('${e.field}','${fm[e.field]}')" title="클릭해서 수정">${e.icon} ${e.label} ${fm[e.field]}</span>`);
-  document.getElementById('diaryMeta').innerHTML = parts.join('') ||
-    '<span style="color:var(--text2)">메타 정보 없음</span>';
+  const parts = EDITABLE.map(e => {
+    const val = (fm[e.field] && fm[e.field] !== '""') ? fm[e.field] : '--';
+    return `<span class="meta-editable" data-field="${e.field}" data-value="${val}" onclick="startMetaEdit('${e.field}','${val === '--' ? '' : val}')" title="클릭해서 수정" style="${val === '--' ? 'opacity:0.45;' : ''}">${e.icon} ${e.label} ${val}</span>`;
+  });
+  document.getElementById('diaryMeta').innerHTML = parts.join('');
 }
 
 function startMetaEdit(field, value) {
@@ -862,13 +862,13 @@ async function saveMetaField(field) {
   if (!newVal) { showResult('⚠️ 값을 입력하세요.', false); return; }
   if (!_diaryFileSha || !_diaryRawText) { showResult('⚠️ 파일 정보 없음. 일지를 다시 열어주세요.', false); return; }
 
-  const newText = _diaryRawText.replace(
+  let newText = _diaryRawText.replace(
     new RegExp(`^(${field}:\\s*)("?)[^"\\n]*("?)`, 'm'),
     `$1"${newVal}"`
   );
   if (newText === _diaryRawText) {
-    showResult('⚠️ 해당 필드를 frontmatter에서 찾지 못했습니다.', false);
-    return;
+    // frontmatter에 필드 없으면 추가
+    newText = _diaryRawText.replace(/^(---\n[\s\S]*?)(---)/m, `$1${field}: "${newVal}"\n$2`);
   }
 
   showResult('⏳ 저장 중...', true);
