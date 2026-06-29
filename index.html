@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>자비스 기록 v2026.06.27.1</title>
+  <title>자비스 기록 v2026.06.27.3</title>
   <style>
     :root {
       --bg: #f5f5f5; --card: #fff; --text: #333; --text2: #666;
@@ -171,7 +171,7 @@
 
   <!-- 헤더 -->
   <div class="header">
-    <h1>🤖 자비스 기록<span class="ver">v2026.06.27.2</span></h1>
+    <h1>🤖 자비스 기록<span class="ver">v2026.06.27.3</span></h1>
     <div style="display:flex;gap:6px;">
       <button class="theme-btn" onclick="changeToken()" id="tokenBtn">🔑 토큰</button>
       <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">DOS</button>
@@ -260,7 +260,7 @@
 
   <div id="result"></div>
 
-  <div class="footer">v2026.06.27.1 · 위치 / 메모 / 장소 / 알림 / 조회</div>
+  <div class="footer">v2026.06.27.3 · 위치 / 메모 / 장소 / 알림 / 조회</div>
 </div>
 
 <!-- 메모 섹션 확인 팝업 -->
@@ -777,10 +777,10 @@ function renderTimeline(items) {
           <div class="tl-label">${item.label}</div>
           <div class="tl-text" id="tl-text-${i}">${item.text}</div>
         </div>
-        ${item.dot !== 'd-location' ? `<div class="tl-actions">
+          <div class="tl-actions">
           <button class="tl-action-btn" onclick="startItemEdit(${i})">✏️</button>
           <button class="tl-action-btn" onclick="deleteItem(${i})">🗑</button>
-        </div>` : ''}
+        </div>
       </div>
     </div>`).join('');
 }
@@ -829,20 +829,92 @@ function closeDiary() {
   _diaryFileUrl = '';
 }
 
+let _diaryFm = {};
+
 function renderDiaryMetaReadonly(fm) {
+  _diaryFm = fm;
   const FIELDS = [
-    { field:'time_in', icon:'🏢', label:'출근' },
-    { field:'time_out', icon:'🚪', label:'퇴근' },
-    { field:'time_home', icon:'🏠', label:'귀가' },
-    { field:'location', icon:'📍', label:'장소' },
-    { field:'energy', icon:'⚡', label:'에너지' },
-    { field:'mood', icon:'😊', label:'기분' },
+    { field:'time_in',   icon:'🏢', label:'출근',  type:'time' },
+    { field:'time_out',  icon:'🚪', label:'퇴근',  type:'time' },
+    { field:'time_home', icon:'🏠', label:'귀가',  type:'time' },
+    { field:'location',  icon:'📍', label:'장소',  type:'text' },
+    { field:'energy',    icon:'⚡', label:'에너지', type:'text' },
+    { field:'mood',      icon:'😊', label:'기분',  type:'text' },
   ];
   const parts = FIELDS
     .filter(e => fm[e.field] && fm[e.field] !== '""')
-    .map(e => `<span>${e.icon} ${e.label} ${fm[e.field]}</span>`);
+    .map(e => `<span style="cursor:pointer;text-decoration:underline dotted;" title="클릭하여 수정" onclick="startMetaEdit('${e.field}','${e.type}','${(fm[e.field]||'').replace(/'/g,"\\'")}')">` +
+      `${e.icon} ${e.label} ${fm[e.field]}</span>`);
   document.getElementById('diaryMeta').innerHTML = parts.join('') ||
     '<span style="color:var(--text2)">메타 정보 없음</span>';
+}
+
+function startMetaEdit(field, type, currentVal) {
+  if (!_diaryFileSha || !_diaryRawText) { showResult('⚠️ 파일 정보 없음. 일지를 다시 열어주세요.', false); return; }
+  const meta = document.getElementById('diaryMeta');
+  const inputHtml = type === 'time'
+    ? `<input type="time" id="meta-edit-input" value="${currentVal}" style="padding:4px 8px;border:1.5px solid var(--border);border-radius:var(--input-radius);font-size:12px;background:var(--card);color:var(--text);font-family:var(--font);">`
+    : `<input type="text" id="meta-edit-input" value="${currentVal}" style="padding:4px 8px;border:1.5px solid var(--border);border-radius:var(--input-radius);font-size:12px;background:var(--card);color:var(--text);font-family:var(--font);width:120px;">`;
+  meta.innerHTML = `
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+      <span style="font-size:12px;color:var(--text2);">${field} 수정:</span>
+      ${inputHtml}
+      <button onclick="saveMetaField('${field}','${type}')"
+        style="padding:4px 10px;background:var(--btn-bg);color:var(--btn-text);border:none;border-radius:var(--input-radius);font-size:12px;cursor:pointer;font-family:var(--font);">저장</button>
+      <button onclick="cancelMetaEdit()"
+        style="padding:4px 8px;background:var(--card);color:var(--text);border:1.5px solid var(--border);border-radius:var(--input-radius);font-size:12px;cursor:pointer;font-family:var(--font);">취소</button>
+    </div>`;
+  document.getElementById('meta-edit-input').focus();
+}
+
+function cancelMetaEdit() {
+  renderDiaryMetaReadonly(_diaryFm);
+}
+
+async function saveMetaField(field, type) {
+  const newVal = document.getElementById('meta-edit-input').value.trim();
+  if (!newVal) { showResult('⚠️ 값을 입력하세요.', false); return; }
+  if (!_diaryFileSha || !_diaryRawText) { showResult('⚠️ 파일 정보 없음.', false); return; }
+
+  // frontmatter 해당 필드 줄 교체
+  const fmLineRe = new RegExp(`^(${field}:\\s*)("?)([^"\\n]*)(\\2)`, 'm');
+  let newRaw;
+  const oldFmLine = _diaryRawText.match(new RegExp(`^${field}:.*$`, 'm'));
+  if (oldFmLine) {
+    newRaw = _diaryRawText.replace(new RegExp(`^${field}:.*$`, 'm'), `${field}: ${newVal}`);
+  } else {
+    // 필드가 없으면 frontmatter 닫기 --- 앞에 추가
+    newRaw = _diaryRawText.replace(/^(---\n[\s\S]*?)(---)/m, `$1${field}: ${newVal}\n$2`);
+  }
+
+  showResult('⏳ 저장 중...', true);
+  try {
+    const encoded = btoa(unescape(encodeURIComponent(newRaw)));
+    const res = await fetch(_diaryFileUrl, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `token ${getToken().replace(/[^\x20-\x7E]/g,'')}`,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ message: '[jarvis] edit meta via web', content: encoded, sha: _diaryFileSha }),
+    });
+    if (res.ok) {
+      const result = await res.json();
+      _diaryFileSha = result.content.sha;
+      _diaryRawText = newRaw;
+      const { fm, items } = parseDiary(newRaw);
+      _diaryItems = items;
+      renderDiaryMetaReadonly(fm);
+      document.getElementById('diaryTimeline').innerHTML = renderTimeline(items);
+      showResult('✅ 수정 완료!', true);
+    } else {
+      const b = await res.json().catch(() => ({}));
+      showResult(`❌ 저장 실패 ${res.status}: ${b.message || ''}`, false);
+    }
+  } catch(e) {
+    showResult(`❌ 네트워크 오류: ${e.message}`, false);
+  }
 }
 
 const DIARY_SECTIONS = ['오늘 한 일', '잘 된 것', '아쉬운 것 / 배운 것', '내일 할 것'];
@@ -853,11 +925,31 @@ function startItemEdit(idx) {
   const textEl = document.getElementById(`tl-text-${idx}`);
   if (!textEl) return;
 
+  const timeVal = item.time === '??:??' ? '' : item.time;
+
+  if (item.dot === 'd-location') {
+    textEl.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input type="time" id="item-edit-time-${idx}" value="${timeVal}"
+            style="padding:4px 8px;border:1.5px solid var(--border);border-radius:var(--input-radius);font-size:12px;background:var(--card);color:var(--text);font-family:var(--font);">
+          <input type="text" id="item-edit-text-${idx}" value="${item.text.replace(/"/g,'&quot;')}" placeholder="장소 라벨"
+            style="flex:1;padding:4px 8px;border:1.5px solid var(--border);border-radius:var(--input-radius);font-size:12px;background:var(--card);color:var(--text);font-family:var(--font);">
+        </div>
+        <div style="display:flex;gap:4px;">
+          <button onclick="saveItemEdit(${idx})"
+            style="padding:4px 10px;background:var(--btn-bg);color:var(--btn-text);border:none;border-radius:var(--input-radius);font-size:12px;cursor:pointer;font-family:var(--font);">저장</button>
+          <button onclick="cancelItemEdit(${idx})"
+            style="padding:4px 8px;background:var(--card);color:var(--text);border:1.5px solid var(--border);border-radius:var(--input-radius);font-size:12px;cursor:pointer;font-family:var(--font);">취소</button>
+        </div>
+      </div>`;
+    document.getElementById(`item-edit-text-${idx}`).focus();
+    return;
+  }
+
   const sectionOptions = DIARY_SECTIONS.map(s =>
     `<option value="${s}" ${item.section === s ? 'selected' : ''}>${s}</option>`
   ).join('');
-
-  const timeVal = item.time === '??:??' ? '' : item.time;
 
   textEl.innerHTML = `
     <div style="display:flex;flex-direction:column;gap:6px;margin-top:4px;">
@@ -896,27 +988,33 @@ function replaceLineByIndex(raw, lineIndex, newLine) {
 
 async function saveItemEdit(idx) {
   const item = _diaryItems[idx];
-  const newSection = document.getElementById(`item-edit-section-${idx}`).value;
   const newTime = document.getElementById(`item-edit-time-${idx}`).value;
   const newContent = document.getElementById(`item-edit-text-${idx}`).value.trim();
   if (!newContent) { showResult('⚠️ 내용을 입력하세요.', false); return; }
   if (!_diaryFileSha || !_diaryRawText) { showResult('⚠️ 파일 정보 없음. 일지를 다시 열어주세요.', false); return; }
 
-  const newLineContent = newTime ? `${newTime} ${newContent}` : newContent;
-  const newLine = `- ${newLineContent}`;
-
   let newRaw = _diaryRawText;
 
-  if (newSection !== item.section) {
-    newRaw = replaceLineByIndex(newRaw, item.lineIndex, null);
-    const sectionHeader = `## ${newSection}`;
-    if (newRaw.includes(sectionHeader)) {
-      newRaw = newRaw.replace(sectionHeader, `${sectionHeader}\n${newLine}`);
-    } else {
-      newRaw = newRaw.trimEnd() + `\n\n## ${newSection}\n${newLine}\n`;
-    }
-  } else {
+  if (item.dot === 'd-location') {
+    const timeStr = newTime || item.time;
+    const newLine = `> 📍 ${timeStr} — ${newContent}`;
     newRaw = replaceLineByIndex(newRaw, item.lineIndex, newLine);
+  } else {
+    const newSection = document.getElementById(`item-edit-section-${idx}`).value;
+    const newLineContent = newTime ? `${newTime} ${newContent}` : newContent;
+    const newLine = `- ${newLineContent}`;
+
+    if (newSection !== item.section) {
+      newRaw = replaceLineByIndex(newRaw, item.lineIndex, null);
+      const sectionHeader = `## ${newSection}`;
+      if (newRaw.includes(sectionHeader)) {
+        newRaw = newRaw.replace(sectionHeader, `${sectionHeader}\n${newLine}`);
+      } else {
+        newRaw = newRaw.trimEnd() + `\n\n## ${newSection}\n${newLine}\n`;
+      }
+    } else {
+      newRaw = replaceLineByIndex(newRaw, item.lineIndex, newLine);
+    }
   }
 
   showResult('⏳ 저장 중...', true);
