@@ -130,6 +130,9 @@
       font-family: var(--font); }
     .diary-meta { background: var(--meta-bg); border-radius: var(--input-radius); padding: 8px 12px;
       margin-bottom: 12px; display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--text2); }
+    .meta-editable { cursor: pointer; border-radius: 6px; padding: 2px 6px;
+      transition: background 0.15s; }
+    .meta-editable:hover { background: var(--border); }
     .timeline { max-height: 420px; overflow-y: auto; }
     .tl-item { display: flex; gap: 10px; margin-bottom: 14px; align-items: flex-start; }
     .tl-time { font-size: 12px; color: var(--text2); min-width: 42px; padding-top: 2px; text-align: right; font-family: 'Courier New', monospace; }
@@ -693,6 +696,10 @@ document.getElementById('noteOverlay').addEventListener('click', e => {
   if (e.target === document.getElementById('noteOverlay')) closeNotePopup();
 });
 
+let _diaryFileSha = '';
+let _diaryRawText = '';
+let _diaryFileUrl = '';
+
 // ── 일지 조회 ──────────────────────────────────────────────
 function getKSTDateStr(offset) {
   const d = new Date();
@@ -779,14 +786,11 @@ async function viewDiary(offset) {
     }
     const data = await res.json();
     const text = decodeURIComponent(escape(atob(data.content.replace(/\n/g,''))));
+    _diaryFileSha = data.sha;
+    _diaryRawText = text;
+    _diaryFileUrl = url.split('?')[0];
     const { fm, items } = parseDiary(text);
-    const meta = [];
-    if (fm.time_in && fm.time_in !== '""' && fm.time_in) meta.push(`🏢 출근 ${fm.time_in}`);
-    if (fm.time_out && fm.time_out !== '""' && fm.time_out) meta.push(`🚪 퇴근 ${fm.time_out}`);
-    if (fm.time_home && fm.time_home !== '""' && fm.time_home) meta.push(`🏠 귀가 ${fm.time_home}`);
-    if (fm.energy && fm.energy !== '""' && fm.energy) meta.push(`⚡ 에너지 ${fm.energy}`);
-    if (fm.mood && fm.mood !== '""' && fm.mood) meta.push(`😊 기분 ${fm.mood}`);
-    document.getElementById('diaryMeta').innerHTML = meta.map(p => `<span>${p}</span>`).join('');
+    renderDiaryMeta(fm);
     document.getElementById('diaryTimeline').innerHTML = renderTimeline(items);
   } catch(e) {
     document.getElementById('diaryTimeline').innerHTML = `<p style="color:var(--err-text);font-size:13px;">오류: ${e.message}</p>`;
@@ -797,6 +801,106 @@ function closeDiary() {
   document.getElementById('diaryView').style.display = 'none';
   document.getElementById('diaryTimeline').innerHTML = '';
   document.getElementById('diaryMeta').innerHTML = '';
+  _diaryFileSha = '';
+  _diaryRawText = '';
+  _diaryFileUrl = '';
+}
+
+function renderDiaryMeta(fm) {
+  const EDITABLE = [
+    { field: 'time_in',   icon: '🏢', label: '출근' },
+    { field: 'time_out',  icon: '🚪', label: '퇴근' },
+    { field: 'time_home', icon: '🏠', label: '귀가' },
+    { field: 'location',  icon: '📍', label: '장소' },
+    { field: 'energy',    icon: '⚡', label: '에너지' },
+    { field: 'mood',      icon: '😊', label: '기분' },
+  ];
+  const parts = EDITABLE
+    .filter(e => fm[e.field] && fm[e.field] !== '""')
+    .map(e => `<span class="meta-editable" data-field="${e.field}" data-value="${fm[e.field]}" onclick="startMetaEdit('${e.field}','${fm[e.field]}')" title="클릭해서 수정">${e.icon} ${e.label} ${fm[e.field]}</span>`);
+  document.getElementById('diaryMeta').innerHTML = parts.join('') ||
+    '<span style="color:var(--text2)">메타 정보 없음</span>';
+}
+
+function startMetaEdit(field, value) {
+  const existing = document.querySelector('.meta-edit-wrap');
+  if (existing) existing.remove();
+  document.querySelectorAll('.meta-editable').forEach(el => el.style.display = '');
+
+  const isTime = field.startsWith('time');
+  const inputType = isTime ? 'time' : 'text';
+
+  const wrap = document.createElement('span');
+  wrap.className = 'meta-edit-wrap';
+  wrap.style.cssText = 'display:inline-flex;gap:4px;align-items:center;flex-wrap:wrap;margin:4px 0;';
+  wrap.innerHTML = `
+    <input type="${inputType}" id="metaEditInput" value="${value}"
+      style="padding:4px 8px;border:1.5px solid var(--text);border-radius:var(--input-radius);
+      font-size:12px;background:var(--card);color:var(--text);font-family:var(--font);">
+    <button onclick="saveMetaField('${field}')"
+      style="padding:4px 10px;background:var(--btn-bg);color:var(--btn-text);
+      border:none;border-radius:var(--input-radius);font-size:12px;cursor:pointer;font-family:var(--font);">저장</button>
+    <button onclick="cancelMetaEdit()"
+      style="padding:4px 8px;background:var(--card);color:var(--text);
+      border:1.5px solid var(--border);border-radius:var(--input-radius);font-size:12px;cursor:pointer;font-family:var(--font);">취소</button>`;
+
+  const target = document.querySelector(`[data-field="${field}"]`);
+  if (!target) return;
+  target.style.display = 'none';
+  target.after(wrap);
+  document.getElementById('metaEditInput').focus();
+}
+
+function cancelMetaEdit() {
+  document.querySelector('.meta-edit-wrap')?.remove();
+  document.querySelectorAll('.meta-editable').forEach(el => el.style.display = '');
+}
+
+async function saveMetaField(field) {
+  const newVal = document.getElementById('metaEditInput').value.trim();
+  if (!newVal) { showResult('⚠️ 값을 입력하세요.', false); return; }
+  if (!_diaryFileSha || !_diaryRawText) { showResult('⚠️ 파일 정보 없음. 일지를 다시 열어주세요.', false); return; }
+
+  const newText = _diaryRawText.replace(
+    new RegExp(`^(${field}:\\s*)("?)[^"\\n]*("?)`, 'm'),
+    `$1"${newVal}"`
+  );
+  if (newText === _diaryRawText) {
+    showResult('⚠️ 해당 필드를 frontmatter에서 찾지 못했습니다.', false);
+    return;
+  }
+
+  showResult('⏳ 저장 중...', true);
+  try {
+    const encoded = btoa(unescape(encodeURIComponent(newText)));
+    const res = await fetch(_diaryFileUrl, {
+      method: 'PUT',
+      headers: {
+        'Authorization': `token ${getToken().replace(/[^\x20-\x7E]/g,'')}`,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: `[jarvis] update ${field} via web`,
+        content: encoded,
+        sha: _diaryFileSha,
+      }),
+    });
+    if (res.ok) {
+      const result = await res.json();
+      _diaryFileSha = result.content.sha;
+      _diaryRawText = newText;
+      const { fm } = parseDiary(newText);
+      cancelMetaEdit();
+      renderDiaryMeta(fm);
+      showResult(`✅ ${field} 저장 완료!`, true);
+    } else {
+      const b = await res.json().catch(() => ({}));
+      showResult(`❌ 저장 실패 ${res.status}: ${b.message || ''}`, false);
+    }
+  } catch(e) {
+    showResult(`❌ 네트워크 오류: ${e.message}`, false);
+  }
 }
 
 // ── 공통 ──────────────────────────────────────────────────
