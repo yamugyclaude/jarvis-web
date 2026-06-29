@@ -732,19 +732,20 @@ function parseDiary(text) {
     const m = l.match(/^(\w+):\s*"?([^"]*)"?$/);
     if (m) fm[m[1]] = m[2].trim();
   });
-  for (const line of lines) {
+  for (let lineIdx = 0; lineIdx < lines.length; lineIdx++) {
+    const line = lines[lineIdx];
     if (line.trim() === '---') { inFM = !inFM; if (!inFM) fmDone = true; continue; }
     if (inFM) continue;
     if (line.startsWith('## ')) { section = line.slice(3).trim(); continue; }
     const locM = line.match(/^>\s*📍\s*(\d{2}:\d{2})\s*[—-]\s*(.+)/);
-    if (locM) { items.push({ time: locM[1], text: locM[2].trim(), dot: 'd-location', label: '이동', rawLine: line }); continue; }
+    if (locM) { items.push({ time: locM[1], text: locM[2].trim(), dot: 'd-location', label: '이동', rawLine: line, lineIndex: lineIdx, section: null }); continue; }
     if (line.startsWith('- ') && section) {
       const c = line.slice(2).trim();
       const tM = c.match(/^(\d{2}:\d{2})\s+(.+)/);
       const meta = TL_META[section] || { label: section, dot: 'd-memo' };
       items.push(tM
-        ? { time: tM[1], text: tM[2], dot: meta.dot, label: meta.label, section, rawLine: line }
-        : { time: '??:??', text: c, dot: meta.dot, label: meta.label, section, rawLine: line });
+        ? { time: tM[1], text: tM[2], dot: meta.dot, label: meta.label, section, rawLine: line, lineIndex: lineIdx }
+        : { time: '??:??', text: c, dot: meta.dot, label: meta.label, section, rawLine: line, lineIndex: lineIdx });
     }
   }
   items.sort((a, b) => a.time === '??:??' ? 1 : b.time === '??:??' ? -1 : a.time.localeCompare(b.time));
@@ -765,10 +766,10 @@ function renderTimeline(items) {
           <div class="tl-label">${item.label}</div>
           <div class="tl-text" id="tl-text-${i}">${item.text}</div>
         </div>
-        <div class="tl-actions">
+        ${item.dot !== 'd-location' ? `<div class="tl-actions">
           <button class="tl-action-btn" onclick="startItemEdit(${i})">✏️</button>
           <button class="tl-action-btn" onclick="deleteItem(${i})">🗑</button>
-        </div>
+        </div>` : ''}
       </div>
     </div>`).join('');
 }
@@ -872,6 +873,16 @@ function cancelItemEdit(idx) {
   document.getElementById(`tl-text-${idx}`).innerHTML = _diaryItems[idx].text;
 }
 
+function replaceLineByIndex(raw, lineIndex, newLine) {
+  const lines = raw.split('\n');
+  if (newLine === null) {
+    lines.splice(lineIndex, 1);
+  } else {
+    lines[lineIndex] = newLine;
+  }
+  return lines.join('\n');
+}
+
 async function saveItemEdit(idx) {
   const item = _diaryItems[idx];
   const newSection = document.getElementById(`item-edit-section-${idx}`).value;
@@ -886,7 +897,7 @@ async function saveItemEdit(idx) {
   let newRaw = _diaryRawText;
 
   if (newSection !== item.section) {
-    newRaw = newRaw.replace(item.rawLine + '\n', '').replace(item.rawLine, '');
+    newRaw = replaceLineByIndex(newRaw, item.lineIndex, null);
     const sectionHeader = `## ${newSection}`;
     if (newRaw.includes(sectionHeader)) {
       newRaw = newRaw.replace(sectionHeader, `${sectionHeader}\n${newLine}`);
@@ -894,7 +905,7 @@ async function saveItemEdit(idx) {
       newRaw = newRaw.trimEnd() + `\n\n## ${newSection}\n${newLine}\n`;
     }
   } else {
-    newRaw = newRaw.replace(item.rawLine, newLine);
+    newRaw = replaceLineByIndex(newRaw, item.lineIndex, newLine);
   }
 
   showResult('⏳ 저장 중...', true);
@@ -932,7 +943,7 @@ async function deleteItem(idx) {
   if (!item) return;
   if (!_diaryFileSha || !_diaryRawText) { showResult('⚠️ 파일 정보 없음. 일지를 다시 열어주세요.', false); return; }
 
-  const newRaw = _diaryRawText.replace(item.rawLine + '\n', '').replace(item.rawLine, '');
+  const newRaw = replaceLineByIndex(_diaryRawText, item.lineIndex, null);
 
   showResult('⏳ 삭제 중...', true);
   try {
