@@ -991,7 +991,7 @@ async function commitDiaryChange(applyFn, message, busyMsg) {
           'Accept': 'application/vnd.github+json',
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ message, content: encoded, sha: latestSha }),
+        body: JSON.stringify({ message, content: encoded, sha: latestSha, branch: REF }),
       });
       if (res.ok) {
         const result = await res.json();
