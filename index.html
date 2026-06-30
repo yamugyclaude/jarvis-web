@@ -963,7 +963,8 @@ async function commitDiaryChange(applyFn, message, busyMsg) {
   showResult(busyMsg, true);
   const token = getToken().replace(/[^\x20-\x7E]/g,'');
   // 자동기록이 같은 파일을 실시간 갱신할 수 있어, 409 시 최신 GET→PUT 재시도
-  for (let attempt = 1; attempt <= 4; attempt++) {
+  const MAX_ATTEMPTS = 6;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       const getRes = await fetch(`${_diaryFileUrl}?ref=${REF}&_=${Date.now()}`, {
         cache: 'no-store',
@@ -1004,9 +1005,9 @@ async function commitDiaryChange(applyFn, message, busyMsg) {
         showResult('✅ 완료!', true);
         return;
       }
-      if (res.status === 409 && attempt < 4) {
-        await new Promise(r => setTimeout(r, 400));
-        continue; // 그새 또 바뀜 → 최신으로 재시도
+      if (res.status === 409 && attempt < MAX_ATTEMPTS) {
+        await new Promise(r => setTimeout(r, 500 * Math.pow(2, attempt - 1)));
+        continue; // 그새 또 바뀜 → 최신으로 재시도 (지수 백오프)
       }
       const b = await res.json().catch(() => ({}));
       showResult(`❌ 저장 실패 ${res.status}: ${b.message || ''}`, false);
