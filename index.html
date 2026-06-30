@@ -244,6 +244,11 @@
     <div class="view-row" style="margin-bottom:8px;">
       <button class="view-btn" onclick="viewDiary(0)">📅 오늘</button>
       <button class="view-btn" onclick="viewDiary(-1)">📅 어제</button>
+      <button class="view-btn" onclick="viewDiary(-2)">📅 그제</button>
+    </div>
+    <div class="view-row" style="margin-bottom:8px;">
+      <input type="date" id="diaryDatePick" style="flex:1;">
+      <button class="view-btn" style="flex:0 0 auto;padding:10px 16px;" onclick="viewDiaryPicked()">조회</button>
     </div>
     <button class="send-btn" onclick="organizeToday()" style="background:var(--card);color:var(--text);">🗂 오늘 일지 정리</button>
   </div>
@@ -256,11 +261,31 @@
     </div>
     <div class="diary-meta" id="diaryMeta"></div>
     <div class="timeline" id="diaryTimeline"></div>
+    <div id="diaryAddBox" style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border);">
+      <div class="tl-label" style="margin-bottom:6px;">➕ 이 날짜에 추가</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        <select id="addSection" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--input-radius);font-size:13px;background:var(--card);color:var(--text);font-family:var(--font);">
+          <option value="메모함">메모함</option>
+          <option value="오늘 한 일">오늘 한 일</option>
+          <option value="일상">일상</option>
+          <option value="점심 식사">점심 식사</option>
+          <option value="저녁 식사">저녁 식사</option>
+          <option value="잘 된 것">잘 된 것</option>
+          <option value="아쉬운 것 / 배운 것">아쉬운 것 / 배운 것</option>
+          <option value="내일 할 것">내일 할 것</option>
+        </select>
+        <input type="time" id="addTime" style="width:110px;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--input-radius);font-size:13px;background:var(--card);color:var(--text);font-family:var(--font);">
+      </div>
+      <div style="display:flex;gap:6px;margin-top:6px;">
+        <input type="text" id="addText" placeholder="놓쳤던 내용을 적으세요..." style="flex:1;" onkeydown="if(event.key==='Enter') addPastItem()">
+        <button class="view-btn" style="flex:0 0 auto;padding:10px 16px;" onclick="addPastItem()">추가</button>
+      </div>
+    </div>
   </div>
 
   <div id="result"></div>
 
-  <div class="footer">v2026.06.27.5 · 위치 / 메모 / 장소 / 알림 / 조회</div>
+  <div class="footer">v2026.06.30.1 · 위치 / 메모 / 장소 / 알림 / 조회 · 날짜선택·과거추가</div>
 </div>
 
 <!-- 메모 섹션 확인 팝업 -->
@@ -713,6 +738,7 @@ let _diaryFileSha = '';
 let _diaryRawText = '';
 let _diaryFileUrl = '';
 let _diaryItems = [];
+let _diaryDate = '';
 
 // ── 일지 조회 ──────────────────────────────────────────────
 function getKSTDateStr(offset) {
@@ -785,11 +811,20 @@ function renderTimeline(items) {
     </div>`).join('');
 }
 
-async function viewDiary(offset) {
+function viewDiary(offset) { return loadDiary(getKSTDateStr(offset)); }
+
+function viewDiaryPicked() {
+  const date = document.getElementById('diaryDatePick').value;
+  if (!date) { showResult('⚠️ 날짜를 선택하세요.', false); return; }
+  loadDiary(date);
+}
+
+async function loadDiary(date) {
   if (!checkToken()) return;
-  const date = getKSTDateStr(offset);
+  _diaryDate = date;
   const [y, m] = [date.slice(0,4), date.slice(5,7)];
   const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/diary/${y}/${m}/${date}.md?ref=${REF}`;
+  _diaryFileUrl = url.split('?')[0];
   document.getElementById('diaryTitle').textContent = `📅 ${date}`;
   document.getElementById('diaryTimeline').innerHTML = '<p style="color:var(--text2);font-size:13px;padding:8px 0;">⏳ 불러오는 중...</p>';
   document.getElementById('diaryMeta').innerHTML = '';
@@ -799,11 +834,16 @@ async function viewDiary(offset) {
     const res = await fetch(url, {
       headers: { 'Authorization': `token ${getToken().replace(/[^\x20-\x7E]/g,'')}`, 'Accept': 'application/vnd.github+json' }
     });
+    if (res.status === 404) {
+      // 그날 일지 파일이 아직 없음 — 추가는 가능(새 파일 생성)
+      _diaryFileSha = ''; _diaryRawText = ''; _diaryItems = [];
+      document.getElementById('diaryMeta').innerHTML = '<span style="color:var(--text2)">메타 정보 없음</span>';
+      document.getElementById('diaryTimeline').innerHTML = '<p style="color:var(--text2);font-size:13px;">📭 기록 없음 — 아래에서 추가할 수 있어요.</p>';
+      return;
+    }
     if (!res.ok) {
-      _diaryFileSha = ''; _diaryRawText = ''; _diaryFileUrl = '';
-      document.getElementById('diaryTimeline').innerHTML = res.status === 404
-        ? '<p style="color:var(--text2);font-size:13px;">📭 기록 없음</p>'
-        : `<p style="color:var(--err-text);font-size:13px;">오류 ${res.status}</p>`;
+      _diaryFileSha = ''; _diaryRawText = '';
+      document.getElementById('diaryTimeline').innerHTML = `<p style="color:var(--err-text);font-size:13px;">오류 ${res.status}</p>`;
       return;
     }
     const data = await res.json();
@@ -827,6 +867,7 @@ function closeDiary() {
   _diaryFileSha = '';
   _diaryRawText = '';
   _diaryFileUrl = '';
+  _diaryDate = '';
 }
 
 let _diaryFm = {};
@@ -1063,6 +1104,63 @@ async function deleteItem(idx) {
     if (latestRaw.includes(item.rawLine)) return latestRaw.replace(item.rawLine, '');
     return null;
   }, '[jarvis] delete item via web', '⏳ 삭제 중...');
+}
+
+// ── 과거 항목 추가 ─────────────────────────────────────────
+const SECTION_ORDER = ['메모함','오늘 한 일','일상','점심 식사','저녁 식사','잘 된 것','아쉬운 것 / 배운 것','내일 할 것'];
+
+function newDiaryTemplate(date) {
+  return `---\ndate: ${date}\nlocation: ""\ntime_in: ""\ntime_out: ""\ntime_home: ""\nenergy: ""\nmood: ""\n---\n\n` +
+    SECTION_ORDER.map(s => `## ${s}\n`).join('\n');
+}
+
+function insertUnderSection(raw, section, line) {
+  const header = `## ${section}`;
+  if (raw.includes(header)) return raw.replace(header, `${header}\n${line}`);
+  return raw.trimEnd() + `\n\n${header}\n${line}\n`;
+}
+
+async function addPastItem() {
+  if (!checkToken()) return;
+  if (!_diaryDate) { showResult('⚠️ 먼저 날짜를 조회하세요.', false); return; }
+  const section = document.getElementById('addSection').value;
+  const time = document.getElementById('addTime').value;
+  const text = document.getElementById('addText').value.trim();
+  if (!text) { showResult('⚠️ 내용을 입력하세요.', false); return; }
+  const line = `- ${time ? time + ' ' : ''}${text}`;
+
+  if (_diaryFileSha && _diaryRawText) {
+    await commitDiaryChange(latestRaw => insertUnderSection(latestRaw, section, line),
+      '[jarvis] add item via web', '⏳ 추가 중...');
+    document.getElementById('addText').value = '';
+    return;
+  }
+  // 그날 일지 파일 자체가 없으면 새로 생성
+  showResult('⏳ 새 일지 생성 중...', true);
+  const token = getToken().replace(/[^\x20-\x7E]/g,'');
+  const raw = insertUnderSection(newDiaryTemplate(_diaryDate), section, line);
+  try {
+    const res = await fetch(_diaryFileUrl, {
+      method: 'PUT',
+      headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: '[jarvis] create diary via web', content: btoa(unescape(encodeURIComponent(raw))), branch: REF }),
+    });
+    if (res.ok) {
+      document.getElementById('addText').value = '';
+      showResult('✅ 추가 완료!', true);
+      loadDiary(_diaryDate);
+      return;
+    }
+    if (res.status === 422) { // 그새 파일이 생김 → 다시 조회 후 추가
+      showResult('⚠️ 파일이 방금 생성됐어요. 다시 조회 후 추가해주세요.', false);
+      loadDiary(_diaryDate);
+      return;
+    }
+    const b = await res.json().catch(() => ({}));
+    showResult(`❌ 생성 실패 ${res.status}: ${b.message || ''}`, false);
+  } catch(e) {
+    showResult(`❌ 네트워크 오류: ${e.message}`, false);
+  }
 }
 
 // ── 공통 ──────────────────────────────────────────────────
