@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>자비스 기록 v2026.06.27.4</title>
+  <title>자비스 기록 v2026.06.27.5</title>
   <style>
     :root {
       --bg: #f5f5f5; --card: #fff; --text: #333; --text2: #666;
@@ -171,7 +171,7 @@
 
   <!-- 헤더 -->
   <div class="header">
-    <h1>🤖 자비스 기록<span class="ver">v2026.06.27.4</span></h1>
+    <h1>🤖 자비스 기록<span class="ver">v2026.06.27.5</span></h1>
     <div style="display:flex;gap:6px;">
       <button class="theme-btn" onclick="changeToken()" id="tokenBtn">🔑 토큰</button>
       <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">DOS</button>
@@ -260,7 +260,7 @@
 
   <div id="result"></div>
 
-  <div class="footer">v2026.06.27.4 · 위치 / 메모 / 장소 / 알림 / 조회</div>
+  <div class="footer">v2026.06.27.5 · 위치 / 메모 / 장소 / 알림 / 조회</div>
 </div>
 
 <!-- 메모 섹션 확인 팝업 -->
@@ -961,49 +961,60 @@ async function commitDiaryChange(applyFn, message, busyMsg) {
     return;
   }
   showResult(busyMsg, true);
-  try {
-    const getRes = await fetch(`${_diaryFileUrl}?ref=${REF}`, {
-      headers: { 'Authorization': `token ${getToken().replace(/[^\x20-\x7E]/g,'')}`, 'Accept': 'application/vnd.github+json' }
-    });
-    if (!getRes.ok) {
-      showResult(`❌ 최신 파일 조회 실패 ${getRes.status}`, false);
-      return;
-    }
-    const getData = await getRes.json();
-    const latestRaw = decodeURIComponent(escape(atob(getData.content.replace(/\n/g,''))));
-    const latestSha = getData.sha;
+  const token = getToken().replace(/[^\x20-\x7E]/g,'');
+  // 자동기록이 같은 파일을 실시간 갱신할 수 있어, 409 시 최신 GET→PUT 재시도
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    try {
+      const getRes = await fetch(`${_diaryFileUrl}?ref=${REF}&_=${Date.now()}`, {
+        cache: 'no-store',
+        headers: { 'Authorization': `token ${token}`, 'Accept': 'application/vnd.github+json' }
+      });
+      if (!getRes.ok) {
+        showResult(`❌ 최신 파일 조회 실패 ${getRes.status} (잠시 후 다시)`, false);
+        return;
+      }
+      const getData = await getRes.json();
+      const latestRaw = decodeURIComponent(escape(atob(getData.content.replace(/\n/g,''))));
+      const latestSha = getData.sha;
 
-    const newRaw = applyFn(latestRaw);
-    if (newRaw === null) {
-      showResult('⚠️ 대상을 찾지 못했습니다. 새로고침 후 다시 시도해주세요.', false);
-      return;
-    }
+      const newRaw = applyFn(latestRaw);
+      if (newRaw === null) {
+        showResult('⚠️ 대상을 찾지 못했습니다. 새로고침 후 다시 시도해주세요.', false);
+        return;
+      }
 
-    const encoded = btoa(unescape(encodeURIComponent(newRaw)));
-    const res = await fetch(_diaryFileUrl, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `token ${getToken().replace(/[^\x20-\x7E]/g,'')}`,
-        'Accept': 'application/vnd.github+json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ message, content: encoded, sha: latestSha }),
-    });
-    if (res.ok) {
-      const result = await res.json();
-      _diaryFileSha = result.content.sha;
-      _diaryRawText = newRaw;
-      const { fm, items } = parseDiary(newRaw);
-      _diaryItems = items;
-      renderDiaryMetaReadonly(fm);
-      document.getElementById('diaryTimeline').innerHTML = renderTimeline(items);
-      showResult('✅ 완료!', true);
-    } else {
+      const encoded = btoa(unescape(encodeURIComponent(newRaw)));
+      const res = await fetch(_diaryFileUrl, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `token ${token}`,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ message, content: encoded, sha: latestSha }),
+      });
+      if (res.ok) {
+        const result = await res.json();
+        _diaryFileSha = result.content.sha;
+        _diaryRawText = newRaw;
+        const { fm, items } = parseDiary(newRaw);
+        _diaryItems = items;
+        renderDiaryMetaReadonly(fm);
+        document.getElementById('diaryTimeline').innerHTML = renderTimeline(items);
+        showResult('✅ 완료!', true);
+        return;
+      }
+      if (res.status === 409 && attempt < 4) {
+        await new Promise(r => setTimeout(r, 400));
+        continue; // 그새 또 바뀜 → 최신으로 재시도
+      }
       const b = await res.json().catch(() => ({}));
       showResult(`❌ 저장 실패 ${res.status}: ${b.message || ''}`, false);
+      return;
+    } catch(e) {
+      showResult(`❌ 네트워크 오류: ${e.message}`, false);
+      return;
     }
-  } catch(e) {
-    showResult(`❌ 네트워크 오류: ${e.message}`, false);
   }
 }
 
