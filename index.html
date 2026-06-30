@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>자비스 기록 v2026.06.30.1</title>
+  <title>자비스 기록 v2026.06.30.2</title>
   <style>
     :root {
       --bg: #f5f5f5; --card: #fff; --text: #333; --text2: #666;
@@ -171,7 +171,7 @@
 
   <!-- 헤더 -->
   <div class="header">
-    <h1>🤖 자비스 기록<span class="ver">v2026.06.30.1</span></h1>
+    <h1>🤖 자비스 기록<span class="ver">v2026.06.30.2</span></h1>
     <div style="display:flex;gap:6px;">
       <button class="theme-btn" onclick="changeToken()" id="tokenBtn">🔑 토큰</button>
       <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">DOS</button>
@@ -265,6 +265,7 @@
       <div class="tl-label" style="margin-bottom:6px;">➕ 이 날짜에 추가</div>
       <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
         <select id="addSection" style="padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--input-radius);font-size:13px;background:var(--card);color:var(--text);font-family:var(--font);">
+          <option value="이동">📍 이동</option>
           <option value="메모함">메모함</option>
           <option value="오늘 한 일">오늘 한 일</option>
           <option value="일상">일상</option>
@@ -285,7 +286,7 @@
 
   <div id="result"></div>
 
-  <div class="footer">v2026.06.30.1 · 위치 / 메모 / 장소 / 알림 / 조회 · 날짜선택·과거추가</div>
+  <div class="footer">v2026.06.30.2 · 위치 / 메모 / 장소 / 알림 / 조회 · 날짜선택·과거추가</div>
 </div>
 
 <!-- 메모 섹션 확인 팝업 -->
@@ -1127,18 +1128,26 @@ async function addPastItem() {
   const time = document.getElementById('addTime').value;
   const text = document.getElementById('addText').value.trim();
   if (!text) { showResult('⚠️ 내용을 입력하세요.', false); return; }
-  const line = `- ${time ? time + ' ' : ''}${text}`;
+
+  // 이동은 섹션 밖 별도 형식(> 📍 HH:MM — 내용), 나머지는 섹션 아래 - 항목
+  let applyFn;
+  if (section === '이동') {
+    const locLine = `> 📍 ${time || '00:00'} — ${text}`;
+    applyFn = raw => raw.trimEnd() + `\n${locLine}\n`;
+  } else {
+    const line = `- ${time ? time + ' ' : ''}${text}`;
+    applyFn = raw => insertUnderSection(raw, section, line);
+  }
 
   if (_diaryFileSha && _diaryRawText) {
-    await commitDiaryChange(latestRaw => insertUnderSection(latestRaw, section, line),
-      '[jarvis] add item via web', '⏳ 추가 중...');
+    await commitDiaryChange(applyFn, '[jarvis] add item via web', '⏳ 추가 중...');
     document.getElementById('addText').value = '';
     return;
   }
   // 그날 일지 파일 자체가 없으면 새로 생성
   showResult('⏳ 새 일지 생성 중...', true);
   const token = getToken().replace(/[^\x20-\x7E]/g,'');
-  const raw = insertUnderSection(newDiaryTemplate(_diaryDate), section, line);
+  const raw = applyFn(newDiaryTemplate(_diaryDate));
   try {
     const res = await fetch(_diaryFileUrl, {
       method: 'PUT',
