@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>자비스 기록 v2026.06.27.3</title>
+  <title>자비스 기록 v2026.06.27.4</title>
   <style>
     :root {
       --bg: #f5f5f5; --card: #fff; --text: #333; --text2: #666;
@@ -171,7 +171,7 @@
 
   <!-- 헤더 -->
   <div class="header">
-    <h1>🤖 자비스 기록<span class="ver">v2026.06.27.3</span></h1>
+    <h1>🤖 자비스 기록<span class="ver">v2026.06.27.4</span></h1>
     <div style="display:flex;gap:6px;">
       <button class="theme-btn" onclick="changeToken()" id="tokenBtn">🔑 토큰</button>
       <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">DOS</button>
@@ -260,7 +260,7 @@
 
   <div id="result"></div>
 
-  <div class="footer">v2026.06.27.3 · 위치 / 메모 / 장소 / 알림 / 조회</div>
+  <div class="footer">v2026.06.27.4 · 위치 / 메모 / 장소 / 알림 / 조회</div>
 </div>
 
 <!-- 메모 섹션 확인 팝업 -->
@@ -874,47 +874,15 @@ function cancelMetaEdit() {
 async function saveMetaField(field, type) {
   const newVal = document.getElementById('meta-edit-input').value.trim();
   if (!newVal) { showResult('⚠️ 값을 입력하세요.', false); return; }
-  if (!_diaryFileSha || !_diaryRawText) { showResult('⚠️ 파일 정보 없음.', false); return; }
 
-  // frontmatter 해당 필드 줄 교체
-  const fmLineRe = new RegExp(`^(${field}:\\s*)("?)([^"\\n]*)(\\2)`, 'm');
-  let newRaw;
-  const oldFmLine = _diaryRawText.match(new RegExp(`^${field}:.*$`, 'm'));
-  if (oldFmLine) {
-    newRaw = _diaryRawText.replace(new RegExp(`^${field}:.*$`, 'm'), `${field}: ${newVal}`);
-  } else {
-    // 필드가 없으면 frontmatter 닫기 --- 앞에 추가
-    newRaw = _diaryRawText.replace(/^(---\n[\s\S]*?)(---)/m, `$1${field}: ${newVal}\n$2`);
-  }
-
-  showResult('⏳ 저장 중...', true);
-  try {
-    const encoded = btoa(unescape(encodeURIComponent(newRaw)));
-    const res = await fetch(_diaryFileUrl, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `token ${getToken().replace(/[^\x20-\x7E]/g,'')}`,
-        'Accept': 'application/vnd.github+json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ message: '[jarvis] edit meta via web', content: encoded, sha: _diaryFileSha }),
-    });
-    if (res.ok) {
-      const result = await res.json();
-      _diaryFileSha = result.content.sha;
-      _diaryRawText = newRaw;
-      const { fm, items } = parseDiary(newRaw);
-      _diaryItems = items;
-      renderDiaryMetaReadonly(fm);
-      document.getElementById('diaryTimeline').innerHTML = renderTimeline(items);
-      showResult('✅ 수정 완료!', true);
-    } else {
-      const b = await res.json().catch(() => ({}));
-      showResult(`❌ 저장 실패 ${res.status}: ${b.message || ''}`, false);
+  await commitDiaryChange(latestRaw => {
+    const oldFmLine = latestRaw.match(new RegExp(`^${field}:.*$`, 'm'));
+    if (oldFmLine) {
+      return latestRaw.replace(new RegExp(`^${field}:.*$`, 'm'), `${field}: ${newVal}`);
     }
-  } catch(e) {
-    showResult(`❌ 네트워크 오류: ${e.message}`, false);
-  }
+    // 필드가 없으면 frontmatter 닫기 --- 앞에 추가
+    return latestRaw.replace(/^(---\n[\s\S]*?)(---)/m, `$1${field}: ${newVal}\n$2`);
+  }, '[jarvis] edit meta via web', '⏳ 저장 중...');
 }
 
 const DIARY_SECTIONS = ['오늘 한 일', '잘 된 것', '아쉬운 것 / 배운 것', '내일 할 것'];
@@ -986,39 +954,31 @@ function replaceLineByIndex(raw, lineIndex, newLine) {
   return lines.join('\n');
 }
 
-async function saveItemEdit(idx) {
-  const item = _diaryItems[idx];
-  const newTime = document.getElementById(`item-edit-time-${idx}`).value;
-  const newContent = document.getElementById(`item-edit-text-${idx}`).value.trim();
-  if (!newContent) { showResult('⚠️ 내용을 입력하세요.', false); return; }
-  if (!_diaryFileSha || !_diaryRawText) { showResult('⚠️ 파일 정보 없음. 일지를 다시 열어주세요.', false); return; }
-
-  let newRaw = _diaryRawText;
-
-  if (item.dot === 'd-location') {
-    const timeStr = newTime || item.time;
-    const newLine = `> 📍 ${timeStr} — ${newContent}`;
-    newRaw = replaceLineByIndex(newRaw, item.lineIndex, newLine);
-  } else {
-    const newSection = document.getElementById(`item-edit-section-${idx}`).value;
-    const newLineContent = newTime ? `${newTime} ${newContent}` : newContent;
-    const newLine = `- ${newLineContent}`;
-
-    if (newSection !== item.section) {
-      newRaw = replaceLineByIndex(newRaw, item.lineIndex, null);
-      const sectionHeader = `## ${newSection}`;
-      if (newRaw.includes(sectionHeader)) {
-        newRaw = newRaw.replace(sectionHeader, `${sectionHeader}\n${newLine}`);
-      } else {
-        newRaw = newRaw.trimEnd() + `\n\n## ${newSection}\n${newLine}\n`;
-      }
-    } else {
-      newRaw = replaceLineByIndex(newRaw, item.lineIndex, newLine);
-    }
+// PUT 직전 최신 파일을 GET하여 sha 충돌(409)을 피하는 공통 헬퍼
+async function commitDiaryChange(applyFn, message, busyMsg) {
+  if (!_diaryFileSha || !_diaryRawText || !_diaryFileUrl) {
+    showResult('⚠️ 파일 정보 없음. 일지를 다시 열어주세요.', false);
+    return;
   }
-
-  showResult('⏳ 저장 중...', true);
+  showResult(busyMsg, true);
   try {
+    const getRes = await fetch(`${_diaryFileUrl}?ref=${REF}`, {
+      headers: { 'Authorization': `token ${getToken().replace(/[^\x20-\x7E]/g,'')}`, 'Accept': 'application/vnd.github+json' }
+    });
+    if (!getRes.ok) {
+      showResult(`❌ 최신 파일 조회 실패 ${getRes.status}`, false);
+      return;
+    }
+    const getData = await getRes.json();
+    const latestRaw = decodeURIComponent(escape(atob(getData.content.replace(/\n/g,''))));
+    const latestSha = getData.sha;
+
+    const newRaw = applyFn(latestRaw);
+    if (newRaw === null) {
+      showResult('⚠️ 대상을 찾지 못했습니다. 새로고침 후 다시 시도해주세요.', false);
+      return;
+    }
+
     const encoded = btoa(unescape(encodeURIComponent(newRaw)));
     const res = await fetch(_diaryFileUrl, {
       method: 'PUT',
@@ -1027,7 +987,7 @@ async function saveItemEdit(idx) {
         'Accept': 'application/vnd.github+json',
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message: '[jarvis] edit item via web', content: encoded, sha: _diaryFileSha }),
+      body: JSON.stringify({ message, content: encoded, sha: latestSha }),
     });
     if (res.ok) {
       const result = await res.json();
@@ -1037,7 +997,7 @@ async function saveItemEdit(idx) {
       _diaryItems = items;
       renderDiaryMetaReadonly(fm);
       document.getElementById('diaryTimeline').innerHTML = renderTimeline(items);
-      showResult('✅ 수정 완료!', true);
+      showResult('✅ 완료!', true);
     } else {
       const b = await res.json().catch(() => ({}));
       showResult(`❌ 저장 실패 ${res.status}: ${b.message || ''}`, false);
@@ -1047,41 +1007,50 @@ async function saveItemEdit(idx) {
   }
 }
 
+async function saveItemEdit(idx) {
+  const item = _diaryItems[idx];
+  const newTime = document.getElementById(`item-edit-time-${idx}`).value;
+  const newContent = document.getElementById(`item-edit-text-${idx}`).value.trim();
+  if (!newContent) { showResult('⚠️ 내용을 입력하세요.', false); return; }
+  if (!_diaryFileSha || !_diaryRawText) { showResult('⚠️ 파일 정보 없음. 일지를 다시 열어주세요.', false); return; }
+
+  await commitDiaryChange(latestRaw => {
+    if (!latestRaw.includes(item.rawLine)) return null;
+    let newLine;
+    if (item.dot === 'd-location') {
+      const timeStr = newTime || item.time;
+      newLine = `> 📍 ${timeStr} — ${newContent}`;
+      return latestRaw.replace(item.rawLine, newLine);
+    }
+    const newSection = document.getElementById(`item-edit-section-${idx}`).value;
+    const newLineContent = newTime ? `${newTime} ${newContent}` : newContent;
+    newLine = `- ${newLineContent}`;
+
+    if (newSection !== item.section) {
+      let raw = latestRaw.replace(`${item.rawLine}\n`, '') === latestRaw
+        ? latestRaw.replace(item.rawLine, '')
+        : latestRaw.replace(`${item.rawLine}\n`, '');
+      const sectionHeader = `## ${newSection}`;
+      if (raw.includes(sectionHeader)) {
+        raw = raw.replace(sectionHeader, `${sectionHeader}\n${newLine}`);
+      } else {
+        raw = raw.trimEnd() + `\n\n## ${newSection}\n${newLine}\n`;
+      }
+      return raw;
+    }
+    return latestRaw.replace(item.rawLine, newLine);
+  }, '[jarvis] edit item via web', '⏳ 저장 중...');
+}
+
 async function deleteItem(idx) {
   const item = _diaryItems[idx];
   if (!item) return;
-  if (!_diaryFileSha || !_diaryRawText) { showResult('⚠️ 파일 정보 없음. 일지를 다시 열어주세요.', false); return; }
 
-  const newRaw = replaceLineByIndex(_diaryRawText, item.lineIndex, null);
-
-  showResult('⏳ 삭제 중...', true);
-  try {
-    const encoded = btoa(unescape(encodeURIComponent(newRaw)));
-    const res = await fetch(_diaryFileUrl, {
-      method: 'PUT',
-      headers: {
-        'Authorization': `token ${getToken().replace(/[^\x20-\x7E]/g,'')}`,
-        'Accept': 'application/vnd.github+json',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ message: '[jarvis] delete item via web', content: encoded, sha: _diaryFileSha }),
-    });
-    if (res.ok) {
-      const result = await res.json();
-      _diaryFileSha = result.content.sha;
-      _diaryRawText = newRaw;
-      const { fm, items } = parseDiary(newRaw);
-      _diaryItems = items;
-      renderDiaryMetaReadonly(fm);
-      document.getElementById('diaryTimeline').innerHTML = renderTimeline(items);
-      showResult('✅ 삭제 완료!', true);
-    } else {
-      const b = await res.json().catch(() => ({}));
-      showResult(`❌ 삭제 실패 ${res.status}: ${b.message || ''}`, false);
-    }
-  } catch(e) {
-    showResult(`❌ 네트워크 오류: ${e.message}`, false);
-  }
+  await commitDiaryChange(latestRaw => {
+    if (latestRaw.includes(`${item.rawLine}\n`)) return latestRaw.replace(`${item.rawLine}\n`, '');
+    if (latestRaw.includes(item.rawLine)) return latestRaw.replace(item.rawLine, '');
+    return null;
+  }, '[jarvis] delete item via web', '⏳ 삭제 중...');
 }
 
 // ── 공통 ──────────────────────────────────────────────────
