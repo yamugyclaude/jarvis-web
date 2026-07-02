@@ -1,0 +1,72 @@
+{
+  "locations": {
+    "home": {
+      "name": "집",
+      "address": "경남 통영시 무전7길 135 한진로즈힐비치2차 201동 305호",
+      "lat": 34.8544,
+      "lng": 128.4333,
+      "radius_m": 100
+    },
+    "office": {
+      "name": "사무실",
+      "address": "경남 통영시 도남로 195",
+      "lat": 34.8347,
+      "lng": 128.4289,
+      "radius_m": 100
+    },
+    "warehouse": {
+      "name": "창고",
+      "address": "경남 통영시 용남면 논싯골길 90-43",
+      "lat": 34.8712,
+      "lng": 128.3891,
+      "radius_m": 150
+    },
+    "신혜식당": {
+      "name": "신혜식당",
+      "address": "경남 통영시 도남동 390-2",
+      "lat": 34.82923,
+      "lng": 128.4252,
+      "radius_m": 50,
+      "note": "정식 8천원, 회사 월달결제"
+    },
+    "장인어른_밭일_돈부_마침": {
+      "name": "장인어른 밭일 돈부 마침",
+      "address": "",
+      "lat": null,
+      "lng": null,
+      "radius_m": 50
+    },
+    "열방교회": {
+      "name": "열방교회",
+      "address": "",
+      "lat": null,
+      "lng": null,
+      "radius_m": 50
+    },
+    "창고": {
+      "name": "창고",
+      "address": "",
+      "lat": 34.88972,
+      "lng": 128.451,
+      "radius_m": 50
+    },
+    "johncage_당구장": {
+      "name": "johnCage 당구장",
+      "address": "",
+      "lat": 34.85963,
+      "lng": 128.42624,
+      "radius_m": 50
+    },
+    "철수네밥상": {
+      "name": "철수네밥상",
+      "address": "",
+      "lat": 34.88837,
+      "lng": 128.4548,
+      "radius_m": 50
+    }
+  },
+  "events": {
+    "arrive": "도착",
+    "depart": "출발"
+  }
+}

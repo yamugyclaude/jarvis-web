@@ -1,0 +1,70 @@
+name: 위치 자동 기록
+
+on:
+  workflow_dispatch:
+    inputs:
+      location:
+        description: '위치 (home / office / warehouse)'
+        required: false
+      event:
+        description: '이벤트 (arrive / depart)'
+        required: false
+      time:
+        description: '시간 (HH:MM) - 비우면 현재시간'
+        required: false
+      place:
+        description: '장소 이름 (가끔 가는 곳, 예: 신혜식당)'
+        required: false
+      lat:
+        description: '위도 (GPS 자동 수집)'
+        required: false
+      lng:
+        description: '경도 (GPS 자동 수집)'
+        required: false
+      note:
+        description: '일과 메모 내용 (자유 입력)'
+        required: false
+      section:
+        description: '섹션 (work/lunch/dinner/good/learn/tomorrow)'
+        required: false
+
+permissions:
+  contents: write
+
+jobs:
+  log-location:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: data
+
+      - name: 위치 기록
+        env:
+          LOCATION: ${{ github.event.inputs.location }}
+          EVENT: ${{ github.event.inputs.event }}
+          TIME: ${{ github.event.inputs.time }}
+          PLACE: ${{ github.event.inputs.place }}
+          LAT: ${{ github.event.inputs.lat }}
+          LNG: ${{ github.event.inputs.lng }}
+          NOTE: ${{ github.event.inputs.note }}
+          SECTION: ${{ github.event.inputs.section }}
+        run: python3 scripts/log_location.py
+
+      - name: Git 커밋 & 푸시
+        run: |
+          git config user.name "Jarvis"
+          git config user.email "jarvis@auto.bot"
+          git add diary/ locations.json places.json
+          git diff --cached --quiet || git commit -m "자동기록: ${{ github.event.inputs.note || github.event.inputs.place || github.event.inputs.location }} ${{ github.event.inputs.event }}"
+          git push origin HEAD:data
+
+      - name: 텔레그램 알림
+        if: env.SUMMARY != ''
+        env:
+          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          curl -sS -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
+            -d chat_id="${TG_CHAT}" \
+            --data-urlencode "text=${SUMMARY}"
