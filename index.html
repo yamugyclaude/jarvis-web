@@ -218,21 +218,6 @@
     <button class="send-btn" onclick="sendPlace()">장소 기록</button>
   </div>
 
-  <!-- 알림 등록 -->
-  <div class="card">
-    <h2>⏰ 알림 등록</h2>
-    <div class="row">
-      <input type="text" id="remindText" placeholder="할 일 내용...">
-    </div>
-    <div class="time-row">
-      <span>날짜:</span>
-      <input type="date" id="remindDate" style="width:140px;">
-      <span>시각:</span>
-      <input type="time" id="remindTime">
-    </div>
-    <button class="send-btn" onclick="sendReminder()">알림 등록</button>
-  </div>
-
   <!-- 일지 조회 -->
   <div class="card">
     <h2>📋 일지 조회</h2>
@@ -281,7 +266,7 @@
 
   <div id="result"></div>
 
-  <div class="footer">v2026.07.02.1 · 위치 / 메모 / 장소 / 알림 / 조회 · 무드 3종(비서·자비스·조용)</div>
+  <div class="footer">v2026.07.02.1 · 위치 / 메모 / 장소 / 조회 · 무드 3종(비서·자비스·조용)</div>
 </div>
 
 <!-- 메모 섹션 확인 팝업 -->
@@ -638,39 +623,6 @@ document.addEventListener('click', e => {
     closePlaceDropdown();
   }
 });
-
-async function sendReminder() {
-  const text = document.getElementById('remindText').value.trim();
-  if (!text) { showResult('⚠️ 할 일 내용을 입력하세요.', false); return; }
-  const remindTime = document.getElementById('remindTime').value;
-  if (!remindTime) { showResult('⚠️ 알림 시각을 입력하세요.', false); return; }
-  const remindDate = document.getElementById('remindDate').value;
-  if (!checkToken()) return;
-  const inputs = { remind_text: text, remind_time: remindTime };
-  if (remindDate) inputs.remind_date = remindDate;
-  showResult('⏳ 전송 중...', true);
-  try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: {
-        'Authorization': `token ${getToken().replace(/[^\x20-\x7E]/g, '')}`,
-        'Accept': 'application/vnd.github+json',
-      },
-      body: JSON.stringify({ ref: REF, inputs }),
-    });
-    if (res.status === 204 || res.ok) {
-      showResult(`✅ 알림 등록! ${remindDate||'오늘'} ${remindTime}에 텔레그램으로 알려드릴게요.`, true);
-      document.getElementById('remindText').value = '';
-      document.getElementById('remindTime').value = '';
-      document.getElementById('remindDate').value = '';
-    } else {
-      const b = await res.json().catch(() => ({}));
-      showResult(`❌ 오류 ${res.status}: ${b.message || '알 수 없는 오류'}`, false);
-    }
-  } catch (e) {
-    showResult(`❌ 네트워크 오류: ${e.message}`, false);
-  }
-}
 
 function organizeToday() {
   if (!checkToken()) return;
