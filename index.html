@@ -3,178 +3,139 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>자비스 기록 v2026.06.30.2</title>
+  <title>자비스 기록 v2026.07.02.1</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --bg: #f5f5f5; --card: #fff; --text: #333; --text2: #666;
-      --border: #ddd; --btn-bg: #111; --btn-text: #fff;
-      --arrive: #4caf50; --depart: #f44336;
-      --ok-bg: #e8f5e9; --ok-text: #2e7d32;
-      --err-bg: #ffebee; --err-text: #c62828;
-      --meta-bg: #f5f5f5; --shadow: 0 1px 3px rgba(0,0,0,0.08);
-      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      --radius: 12px; --input-radius: 10px;
-    }
-    body.dos {
-      --bg: #0a0a0a; --card: #0a0a0a; --text: #00ff41; --text2: #00cc33;
-      --border: #00ff41; --btn-bg: #00ff41; --btn-text: #000;
-      --arrive: #00ff41; --depart: #ff4444;
-      --ok-bg: #001a00; --ok-text: #00ff41;
-      --err-bg: #1a0000; --err-text: #ff4444;
-      --meta-bg: #001100; --shadow: 0 0 8px rgba(0,255,65,0.3);
-      --font: 'Courier New', Courier, monospace;
-      --radius: 0; --input-radius: 0;
-    }
+    @keyframes blink { 50% { opacity: 0.25; } }
+    @keyframes sweep { 0% { transform: translateY(-100%); } 100% { transform: translateY(1400%); } }
+
+    body[data-theme="concierge"]{--bg:oklch(0.985 0.007 75);--card:#ffffff;--text:oklch(0.24 0.01 60);--text2:oklch(0.55 0.02 60);--border:oklch(0.92 0.008 70);--btn-bg:oklch(0.62 0.13 45);--btn-text:#fff;--arrive:oklch(0.5 0.11 150);--depart:oklch(0.58 0.16 30);--ok-bg:oklch(0.95 0.04 150);--ok-text:oklch(0.42 0.11 150);--err-bg:oklch(0.95 0.045 30);--err-text:oklch(0.5 0.16 30);--meta-bg:oklch(0.97 0.006 70);--shadow:0 1px 3px rgba(60,40,20,0.08);--radius:18px;--input-radius:12px;--font:'Pretendard',sans-serif;--head:'Pretendard',sans-serif;--mono:'JetBrains Mono',monospace;--page:oklch(0.955 0.006 70);--grid:none;--accent:oklch(0.62 0.13 45);--label-tt:uppercase;--label-sp:0.5px;}
+    body[data-theme="hud"]{--bg:oklch(0.15 0.012 250);--card:oklch(0.19 0.012 250);--text:oklch(0.92 0.01 220);--text2:oklch(0.6 0.02 220);--border:oklch(0.34 0.02 220);--btn-bg:oklch(0.78 0.13 200);--btn-text:oklch(0.15 0.012 250);--arrive:oklch(0.82 0.13 200);--depart:oklch(0.72 0.16 25);--ok-bg:oklch(0.3 0.05 200);--ok-text:oklch(0.85 0.13 200);--err-bg:oklch(0.3 0.08 25);--err-text:oklch(0.82 0.14 25);--meta-bg:oklch(0.22 0.012 250);--shadow:0 0 0 1px oklch(0.3 0.02 220);--radius:10px;--input-radius:8px;--font:'Pretendard',sans-serif;--head:'Space Grotesk',sans-serif;--mono:'JetBrains Mono',monospace;--page:oklch(0.1 0.01 250);--grid:linear-gradient(oklch(0.2 0.012 250) 1px,transparent 1px),linear-gradient(90deg,oklch(0.2 0.012 250) 1px,transparent 1px);--accent:oklch(0.78 0.13 200);--label-tt:uppercase;--label-sp:1.5px;}
+    body[data-theme="calm"]{--bg:oklch(0.985 0.003 255);--card:oklch(0.985 0.003 255);--text:oklch(0.26 0.01 255);--text2:oklch(0.58 0.01 255);--border:oklch(0.9 0.004 255);--btn-bg:oklch(0.5 0.06 155);--btn-text:#fff;--arrive:oklch(0.5 0.09 150);--depart:oklch(0.55 0.1 30);--ok-bg:oklch(0.96 0.02 155);--ok-text:oklch(0.42 0.07 155);--err-bg:oklch(0.96 0.02 30);--err-text:oklch(0.5 0.12 30);--meta-bg:oklch(0.97 0.003 255);--shadow:none;--radius:14px;--input-radius:12px;--font:'Pretendard',sans-serif;--head:'Space Grotesk',sans-serif;--mono:'Space Grotesk',sans-serif;--page:oklch(0.965 0.003 255);--grid:none;--accent:oklch(0.5 0.06 155);--label-tt:none;--label-sp:0;}
+
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: var(--font); background: var(--bg); color: var(--text); transition: all 0.2s; }
-    .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+    body{background:var(--page);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;transition:background .25s,color .25s;}
+    .mono{font-family:var(--mono);}
+    .container{max-width:600px;margin:0 auto;padding:18px 18px 60px;background-image:var(--grid);background-size:26px 26px;min-height:100vh;position:relative;}
+    .scan{display:none;position:fixed;top:0;left:0;right:0;height:70px;pointer-events:none;background:linear-gradient(oklch(0.78 0.13 200 / 0.07),transparent);z-index:1;}
+    body[data-theme="hud"] .scan{display:block;animation:sweep 6s linear infinite;}
 
     /* 헤더 */
-    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    h1 { font-size: 18px; font-weight: 700; }
-    h1 .ver { font-size: 11px; font-weight: 400; color: var(--text2); margin-left: 6px; }
-    .theme-btn { padding: 5px 12px; border: 1.5px solid var(--border); background: var(--card);
-      color: var(--text); border-radius: var(--input-radius); font-family: var(--font);
-      font-size: 12px; cursor: pointer; }
-    body.dos .theme-btn { letter-spacing: 1px; }
+    .header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px;position:relative;z-index:2;flex-wrap:wrap;}
+    .brand{display:flex;align-items:center;gap:7px;font-family:var(--head);font-weight:700;font-size:16px;letter-spacing:-0.01em;}
+    .brand .ver{font-size:11px;font-weight:400;color:var(--text2);margin-left:6px;}
+    .moodbar{display:flex;gap:4px;background:var(--card);border:1px solid var(--border);border-radius:22px;padding:3px;box-shadow:var(--shadow);}
+    .mood{border:none;background:transparent;color:var(--text2);font-family:var(--font);font-size:12px;font-weight:600;padding:6px 13px;border-radius:18px;cursor:pointer;transition:all .15s;white-space:nowrap;}
+    .mood.active{background:var(--accent);color:var(--btn-text);}
+    .icon-btn{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:var(--input-radius);padding:8px 11px;font-size:13px;cursor:pointer;}
+
+    /* 히어로 */
+    #hero-concierge,#hero-hud,#hero-calm{display:none;position:relative;z-index:2;margin-bottom:18px;}
+    body[data-theme="concierge"] #hero-concierge{display:block;}
+    body[data-theme="hud"] #hero-hud{display:block;}
+    body[data-theme="calm"] #hero-calm{display:flex;justify-content:space-between;align-items:flex-start;}
 
     /* 카드 */
-    .card { background: var(--card); border-radius: var(--radius); padding: 16px;
-      margin-bottom: 14px; box-shadow: var(--shadow); border: 1px solid transparent; }
-    body.dos .card { border-color: var(--border); }
-    h2 { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase;
-      letter-spacing: 0.5px; margin-bottom: 10px; }
-    body.dos h2 { color: var(--text); letter-spacing: 2px; }
-    body.dos h2::before { content: '> '; }
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:var(--shadow);position:relative;z-index:2;}
+    h2{font-size:12px;font-weight:700;color:var(--text2);text-transform:var(--label-tt);letter-spacing:var(--label-sp);margin-bottom:12px;font-family:var(--font);}
+    body[data-theme="hud"] h2{color:var(--accent);font-family:var(--mono);}
+    body[data-theme="hud"] h2::before{content:'> ';}
 
     /* 토큰 배너 */
-    .token-banner { background: #fff3cd; border: 1px solid #ffc107; border-radius: var(--radius);
-      padding: 14px; margin-bottom: 14px; font-size: 13px; color: #333; }
-    body.dos .token-banner { background: #1a1100; border-color: #ffb000; color: #ffb000; }
-    .token-banner input { width: 100%; margin-top: 8px; padding: 8px 10px;
-      border: 1px solid #ddd; border-radius: var(--input-radius); font-size: 13px;
-      font-family: monospace; background: var(--card); color: var(--text); }
-    .token-banner button { margin-top: 8px; padding: 7px 16px; background: #333; color: #fff;
-      border: none; border-radius: var(--input-radius); font-size: 13px; cursor: pointer;
-      font-family: var(--font); }
-    body.dos .token-banner button { background: #ffb000; color: #000; }
+    .token-banner{background:var(--card);border:1px solid var(--accent);border-radius:var(--radius);padding:14px;margin-bottom:14px;font-size:13px;color:var(--text);position:relative;z-index:2;}
+    .token-banner input{width:100%;margin-top:8px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--input-radius);font-size:13px;font-family:var(--mono);background:var(--card);color:var(--text);}
+    .token-banner button{margin-top:8px;padding:7px 16px;background:var(--btn-bg);color:var(--btn-text);border:none;border-radius:var(--input-radius);font-size:13px;cursor:pointer;font-family:var(--font);}
 
     /* 위치 버튼 */
-    .btn-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-    .loc-btn { padding: 12px 6px; border: 1.5px solid var(--border); background: var(--card);
-      color: var(--text); border-radius: var(--input-radius); font-size: 12px; cursor: pointer;
-      text-align: center; font-family: var(--font); transition: opacity 0.1s; }
-    .loc-btn:active { opacity: 0.7; }
-    .loc-btn.arrive { border-color: var(--arrive); color: var(--arrive); }
-    .loc-btn.depart { border-color: var(--depart); color: var(--depart); }
-    body.dos .loc-btn { letter-spacing: 0.5px; }
-    body.dos .loc-btn.arrive::before { content: '[+] '; }
-    body.dos .loc-btn.depart::before { content: '[-] '; }
+    .btn-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+    .loc-btn{padding:12px 6px;border:1.5px solid var(--border);background:var(--card);color:var(--text);border-radius:var(--input-radius);font-size:12px;cursor:pointer;text-align:center;font-family:var(--font);transition:opacity .1s;}
+    .loc-btn:active{opacity:.7;}
+    .loc-btn.arrive{border-color:var(--arrive);color:var(--arrive);}
+    .loc-btn.depart{border-color:var(--depart);color:var(--depart);}
+    body[data-theme="hud"] .loc-btn{font-family:var(--mono);}
 
     /* 인풋 */
-    .row { display: flex; gap: 8px; margin-bottom: 10px; }
-    input[type=text], input[type=time], input[type=date], select {
-      padding: 10px 12px; border: 1.5px solid var(--border); border-radius: var(--input-radius);
-      font-size: 14px; background: var(--card); color: var(--text); font-family: var(--font); }
-    input[type=text] { flex: 1; }
-    input:focus, select:focus { outline: none; border-color: var(--text); }
-    select { cursor: pointer; }
-    .time-row { display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
-      font-size: 13px; color: var(--text2); }
-    .time-row input { width: 120px; }
-    .hint { font-size: 11px; color: var(--text2); }
+    .row{display:flex;gap:8px;margin-bottom:10px;}
+    input[type=text],input[type=time],input[type=date],select{padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--input-radius);font-size:14px;background:var(--card);color:var(--text);font-family:var(--font);}
+    input[type=text]{flex:1;}
+    input:focus,select:focus{outline:none;border-color:var(--accent);}
+    select{cursor:pointer;}
+    .time-row{display:flex;align-items:center;gap:8px;margin-bottom:10px;font-size:13px;color:var(--text2);}
+    .time-row input{width:120px;}
+    .hint{font-size:11px;color:var(--text2);}
 
     /* 전송 버튼 */
-    .send-btn { width: 100%; padding: 12px; background: var(--btn-bg); color: var(--btn-text);
-      border: 1.5px solid var(--border); border-radius: var(--input-radius); font-size: 14px;
-      font-weight: 600; cursor: pointer; font-family: var(--font); }
-    .send-btn:active { opacity: 0.8; }
-    body.dos .send-btn { letter-spacing: 2px; }
-    body.dos .send-btn::before { content: '[ '; }
-    body.dos .send-btn::after { content: ' ]'; }
+    .send-btn{width:100%;padding:12px;background:var(--btn-bg);color:var(--btn-text);border:none;border-radius:var(--input-radius);font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);}
+    .send-btn:active{opacity:.85;}
+    body[data-theme="hud"] .send-btn{font-family:var(--mono);letter-spacing:1px;}
 
     /* 결과 */
-    #result { margin-top: 10px; padding: 10px 14px; border-radius: var(--input-radius);
-      font-size: 13px; display: none; font-family: var(--font); }
-    #result.ok { background: var(--ok-bg); color: var(--ok-text); }
-    #result.err { background: var(--err-bg); color: var(--err-text); }
+    #result{margin-top:10px;padding:10px 14px;border-radius:var(--input-radius);font-size:13px;display:none;position:relative;z-index:2;font-family:var(--font);}
+    #result.ok{background:var(--ok-bg);color:var(--ok-text);}
+    #result.err{background:var(--err-bg);color:var(--err-text);}
 
     /* 팝업 오버레이 */
-    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5);
-      z-index: 100; align-items: center; justify-content: center; }
-    .overlay.show { display: flex; }
-    .popup { background: var(--card); border-radius: var(--radius); padding: 20px;
-      width: 90%; max-width: 420px; box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-      border: 1px solid var(--border); font-family: var(--font); }
-    body.dos .popup { border: 2px solid var(--border); box-shadow: 0 0 20px rgba(0,255,65,0.4); }
-    .popup-title { font-size: 13px; font-weight: 700; margin-bottom: 12px; color: var(--text); }
-    .popup-text { font-size: 14px; background: var(--meta-bg); padding: 10px 12px;
-      border-radius: var(--input-radius); margin-bottom: 12px; color: var(--text);
-      word-break: break-all; }
-    .popup-label { font-size: 12px; color: var(--text2); margin-bottom: 6px; }
-    .popup select { width: 100%; margin-bottom: 14px; }
-    .popup-btns { display: flex; gap: 8px; }
-    .popup-btns button { flex: 1; padding: 10px; border-radius: var(--input-radius);
-      font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font); border: 1.5px solid var(--border); }
-    .btn-confirm { background: var(--btn-bg); color: var(--btn-text); }
-    .btn-cancel  { background: var(--card); color: var(--text); }
+    .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:100;align-items:center;justify-content:center;}
+    .overlay.show{display:flex;}
+    .popup{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px;width:90%;max-width:420px;box-shadow:0 10px 40px rgba(0,0,0,0.3);font-family:var(--font);}
+    .popup-title{font-size:14px;font-weight:700;margin-bottom:12px;color:var(--text);}
+    .popup-text{font-size:14px;background:var(--meta-bg);padding:10px 12px;border-radius:var(--input-radius);margin-bottom:12px;color:var(--text);word-break:break-all;}
+    .popup-label{font-size:12px;color:var(--text2);margin-bottom:6px;}
+    .popup select{width:100%;margin-bottom:14px;}
+    .popup-btns{display:flex;gap:8px;}
+    .popup-btns button{flex:1;padding:10px;border-radius:var(--input-radius);font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);border:1.5px solid var(--border);}
+    .btn-confirm{background:var(--btn-bg);color:var(--btn-text);border-color:var(--btn-bg);}
+    .btn-cancel{background:var(--card);color:var(--text);}
 
     /* 일지 조회 */
-    .diary-view { background: var(--card); border-radius: var(--radius); padding: 16px;
-      margin-bottom: 14px; box-shadow: var(--shadow); border: 1px solid transparent; display: none; }
-    body.dos .diary-view { border-color: var(--border); }
-    .diary-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-    .diary-title { font-size: 14px; font-weight: 700; }
-    .close-btn { padding: 6px 12px; border: 1.5px solid var(--border); background: var(--card);
-      color: var(--text); border-radius: var(--input-radius); font-size: 12px; cursor: pointer;
-      font-family: var(--font); }
-    .diary-meta { background: var(--meta-bg); border-radius: var(--input-radius); padding: 8px 12px;
-      margin-bottom: 12px; display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--text2); }
-    .tl-actions { display:flex; gap:4px; margin-left:auto; padding-left:8px; flex-shrink:0; }
-    .tl-action-btn { padding:2px 7px; font-size:11px; border:1.5px solid var(--border);
-      border-radius:var(--input-radius); background:var(--card); color:var(--text);
-      cursor:pointer; font-family:var(--font); line-height:1.6; }
-    .tl-action-btn:active { opacity:0.7; }
-    .timeline { max-height: 420px; overflow-y: auto; }
-    .tl-item { display: flex; gap: 10px; margin-bottom: 14px; align-items: flex-start; }
-    .tl-time { font-size: 12px; color: var(--text2); min-width: 42px; padding-top: 2px; text-align: right; font-family: 'Courier New', monospace; }
-    .tl-col { display: flex; flex-direction: column; align-items: center; }
-    .tl-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
-    body.dos .tl-dot { border-radius: 0; }
-    .tl-bar { width: 2px; background: var(--border); flex: 1; min-height: 14px; margin-top: 2px; }
-    .tl-body { flex: 1; }
-    .tl-label { font-size: 10px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 2px; }
-    .tl-text { font-size: 14px; line-height: 1.5; }
+    .diary-view{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:var(--shadow);display:none;position:relative;z-index:2;}
+    .diary-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+    .diary-title{font-size:15px;font-weight:700;}
+    .close-btn{padding:6px 12px;border:1.5px solid var(--border);background:var(--card);color:var(--text);border-radius:var(--input-radius);font-size:12px;cursor:pointer;font-family:var(--font);}
+    .diary-meta{background:var(--meta-bg);border-radius:var(--input-radius);padding:8px 12px;margin-bottom:12px;display:flex;gap:10px;flex-wrap:wrap;font-size:12px;color:var(--text2);}
+    .tl-actions{display:flex;gap:4px;margin-left:auto;padding-left:8px;flex-shrink:0;}
+    .tl-action-btn{padding:2px 7px;font-size:11px;border:1.5px solid var(--border);border-radius:var(--input-radius);background:var(--card);color:var(--text);cursor:pointer;font-family:var(--font);line-height:1.6;}
+    .tl-action-btn:active{opacity:.7;}
+    .timeline{max-height:440px;overflow-y:auto;}
+    .tl-item{display:flex;gap:10px;margin-bottom:14px;align-items:flex-start;}
+    .tl-time{font-size:12px;color:var(--text2);min-width:42px;padding-top:2px;text-align:right;font-family:var(--mono);}
+    .tl-col{display:flex;flex-direction:column;align-items:center;}
+    .tl-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:4px;}
+    body[data-theme="hud"] .tl-dot{border-radius:0;}
+    .tl-bar{width:2px;background:var(--border);flex:1;min-height:14px;margin-top:2px;}
+    .tl-body{flex:1;}
+    .tl-label{font-size:10px;color:var(--text2);text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px;}
+    .tl-text{font-size:14px;line-height:1.5;color:var(--text);}
     .d-location{background:#2196f3} .d-lunch{background:#ff9800} .d-dinner{background:#e91e63}
     .d-work{background:#4caf50} .d-memo{background:#9c27b0} .d-life{background:#00bcd4}
     .d-good{background:#8bc34a} .d-learn{background:#ff5722} .d-tomorrow{background:#607d8b}
-    body.dos .tl-text { color: var(--text); }
 
     /* 조회 버튼 행 */
-    .view-row { display: flex; gap: 8px; }
-    .view-btn { flex: 1; padding: 10px; border: 1.5px solid var(--border); background: var(--card);
-      color: var(--text); border-radius: var(--input-radius); font-size: 13px; font-weight: 600;
-      cursor: pointer; font-family: var(--font); }
+    .view-row{display:flex;gap:8px;}
+    .view-btn{flex:1;padding:10px;border:1.5px solid var(--border);background:var(--card);color:var(--text);border-radius:var(--input-radius);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);}
 
     /* 하단 */
-    .footer { text-align: center; color: var(--text2); font-size: 11px; padding: 12px 0 20px; }
-    body.dos .footer::before { content: '> '; }
-
-    /* DOS 커서 깜빡임 */
-    body.dos input::after { content: '█'; animation: blink 1s step-end infinite; }
-    @keyframes blink { 50% { opacity: 0; } }
-    body.dos * { transition: none !important; }
+    .footer{text-align:center;color:var(--text2);font-size:11px;padding:16px 0 20px;position:relative;z-index:2;}
+    body[data-theme="hud"] .footer{font-family:var(--mono);}
   </style>
 </head>
-<body>
+<body data-theme="concierge">
+<div class="scan"></div>
 <div class="container">
 
   <!-- 헤더 -->
   <div class="header">
-    <h1>🤖 자비스 기록<span class="ver">v2026.06.30.2</span></h1>
-    <div style="display:flex;gap:6px;">
-      <button class="theme-btn" onclick="changeToken()" id="tokenBtn">🔑 토큰</button>
-      <button class="theme-btn" onclick="toggleTheme()" id="themeBtn">DOS</button>
+    <div class="brand"><span>🤖</span><span>자비스 기록</span><span class="ver">v2026.07.02.1</span></div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="moodbar">
+        <button class="mood" data-t="concierge" onclick="setTheme('concierge')">비서</button>
+        <button class="mood" data-t="hud" onclick="setTheme('hud')">자비스</button>
+        <button class="mood" data-t="calm" onclick="setTheme('calm')">조용</button>
+      </div>
+      <button class="icon-btn" onclick="changeToken()">🔑</button>
     </div>
   </div>
 
@@ -183,6 +144,40 @@
     <strong>⚙️ 처음 한 번만:</strong> GitHub 토큰을 입력하세요.
     <input type="password" id="tokenInput" placeholder="ghp_...">
     <button onclick="saveToken()">저장</button>
+  </div>
+
+  <!-- 히어로 (테마별) -->
+  <div id="hero-concierge">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div>
+        <div class="mono" id="hc-date" style="font-size:11px;letter-spacing:1px;color:var(--accent);text-transform:uppercase;"></div>
+        <div style="font-family:var(--head);font-size:26px;font-weight:800;letter-spacing:-0.02em;margin-top:4px;">사장님, 어서오세요</div>
+      </div>
+      <div style="width:42px;height:42px;border-radius:50%;background:var(--text);color:var(--card);display:flex;align-items:center;justify-content:center;font-size:18px;">👔</div>
+    </div>
+  </div>
+
+  <div id="hero-hud" style="border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding-bottom:12px;margin-bottom:12px;">
+      <div style="display:flex;align-items:center;gap:9px;">
+        <span style="width:9px;height:9px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px var(--accent);animation:blink 1.8s infinite;"></span>
+        <span style="font-family:var(--head);font-size:16px;font-weight:600;letter-spacing:.5px;">J.A.R.V.I.S</span>
+      </div>
+      <span class="mono" id="hh-status" style="font-size:11px;letter-spacing:1px;color:var(--accent);">ONLINE</span>
+    </div>
+    <div style="display:flex;gap:9px;">
+      <div style="flex:1;border:1px solid var(--border);border-radius:8px;padding:9px 12px;"><div class="mono" style="font-size:10px;letter-spacing:1px;color:var(--text2);">DATE</div><div id="hh-date" class="mono" style="font-size:14px;font-weight:700;color:var(--accent);margin-top:3px;"></div></div>
+      <div style="flex:1;border:1px solid var(--border);border-radius:8px;padding:9px 12px;"><div class="mono" style="font-size:10px;letter-spacing:1px;color:var(--text2);">TIME</div><div id="hh-time" class="mono" style="font-size:14px;font-weight:700;color:var(--accent);margin-top:3px;"></div></div>
+      <div style="flex:1;border:1px solid var(--border);border-radius:8px;padding:9px 12px;"><div class="mono" style="font-size:10px;letter-spacing:1px;color:var(--text2);">GPS</div><div class="mono" style="font-size:14px;font-weight:700;color:var(--accent);margin-top:3px;">READY</div></div>
+    </div>
+  </div>
+
+  <div id="hero-calm">
+    <div>
+      <div id="cc-weekday" style="font-size:13px;color:var(--text2);"></div>
+      <div id="cc-date" style="font-family:var(--head);font-size:40px;font-weight:600;letter-spacing:-0.02em;line-height:1;margin-top:2px;"></div>
+    </div>
+    <span id="cc-status" style="font-size:12px;color:var(--text2);border:1px solid var(--border);border-radius:20px;padding:6px 13px;"></span>
   </div>
 
   <!-- 위치 기록 -->
@@ -250,7 +245,7 @@
       <input type="date" id="diaryDatePick" style="flex:1;">
       <button class="view-btn" style="flex:0 0 auto;padding:10px 16px;" onclick="viewDiaryPicked()">조회</button>
     </div>
-    <button class="send-btn" onclick="organizeToday()" style="background:var(--card);color:var(--text);">🗂 오늘 일지 정리</button>
+    <button class="send-btn" onclick="organizeToday()" style="background:var(--card);color:var(--text);border:1.5px solid var(--border);">🗂 오늘 일지 정리</button>
   </div>
 
   <!-- 조회 결과 -->
@@ -286,7 +281,7 @@
 
   <div id="result"></div>
 
-  <div class="footer">v2026.06.30.2 · 위치 / 메모 / 장소 / 알림 / 조회 · 날짜선택·과거추가</div>
+  <div class="footer">v2026.07.02.1 · 위치 / 메모 / 장소 / 알림 / 조회 · 무드 3종(비서·자비스·조용)</div>
 </div>
 
 <!-- 메모 섹션 확인 팝업 -->
@@ -351,10 +346,12 @@ function saveToken() {
   localStorage.setItem('jarvis_gh_token', val);
   document.getElementById('tokenBanner').style.display = 'none';
   showResult('✅ 토큰 저장 완료!', true);
+  updateStatus();
   loadPlacesFromGitHub();
 }
 function checkToken() {
   if (getToken()) { document.getElementById('tokenBanner').style.display = 'none'; return true; }
+  document.getElementById('tokenBanner').style.display = 'block';
   showResult('⚠️ 먼저 GitHub 토큰을 입력해주세요.', false);
   return false;
 }
@@ -367,15 +364,35 @@ function changeToken() {
   input.focus();
 }
 
-// ── 테마 ──────────────────────────────────────────────────
-function toggleTheme() {
-  const isDos = document.body.classList.toggle('dos');
-  document.getElementById('themeBtn').textContent = isDos ? '일반' : 'DOS';
-  localStorage.setItem('jarvis_theme', isDos ? 'dos' : 'normal');
+// ── 테마(무드) ────────────────────────────────────────────
+function setTheme(name) {
+  document.body.dataset.theme = name;
+  localStorage.setItem('jarvis_theme_v2', name);
+  document.querySelectorAll('.mood').forEach(m => m.classList.toggle('active', m.dataset.t === name));
+  updateStatus();
 }
-if (localStorage.getItem('jarvis_theme') === 'dos') {
-  document.body.classList.add('dos');
-  document.getElementById('themeBtn').textContent = '일반';
+function updateStatus() {
+  const on = !!getToken();
+  const cc = document.getElementById('cc-status'); if (cc) cc.textContent = on ? '● 연결됨' : '토큰 필요';
+  const hh = document.getElementById('hh-status'); if (hh) hh.textContent = on ? 'ONLINE' : 'NO TOKEN';
+}
+const WD = ['일','월','화','수','목','금','토'];
+function fillDates() {
+  const now = new Date();
+  const kst = new Date(now.getTime() + (now.getTimezoneOffset() + 540) * 60000);
+  const mo = kst.getMonth() + 1, da = kst.getDate(), wd = WD[kst.getDay()];
+  const hcd = document.getElementById('hc-date'); if (hcd) hcd.textContent = `${wd}요일 · ${mo}월 ${da}일`;
+  const hhd = document.getElementById('hh-date'); if (hhd) hhd.textContent = `${String(mo).padStart(2,'0')}.${String(da).padStart(2,'0')}`;
+  const ccw = document.getElementById('cc-weekday'); if (ccw) ccw.textContent = `${wd}요일`;
+  const ccd = document.getElementById('cc-date'); if (ccd) ccd.textContent = `${mo}. ${da}`;
+  tick();
+}
+let _clk;
+function tick() {
+  const now = new Date();
+  const kst = new Date(now.getTime() + (now.getTimezoneOffset() + 540) * 60000);
+  const t = `${String(kst.getHours()).padStart(2,'0')}:${String(kst.getMinutes()).padStart(2,'0')}`;
+  const el = document.getElementById('hh-time'); if (el) el.textContent = t;
 }
 
 // ── dispatch ──────────────────────────────────────────────
@@ -669,7 +686,6 @@ const WORK = ["완료","마침","완성","끝냄","작업","회의","미팅","�
 function autoClassify(text) {
   const n = text.toLowerCase();
   const now = new Date();
-  const h = now.getHours() + (now.getTimezoneOffset() < 0 ? 0 : -9); // 대략 KST
   const kstH = (now.getUTCHours() + 9) % 24;
   if (FOOD.some(w => n.includes(w))) {
     if (kstH >= 10 && kstH <= 15) return 'lunch';
@@ -1179,10 +1195,16 @@ function showResult(msg, ok) {
   el.className = ok ? 'ok' : 'err';
   el.style.display = 'block';
 }
+
+// ── 초기화 ────────────────────────────────────────────────
+setTheme(localStorage.getItem('jarvis_theme_v2') || 'concierge');
+fillDates();
+_clk = setInterval(tick, 20000);
 if (getToken()) {
   document.getElementById('tokenBanner').style.display = 'none';
   loadPlacesFromGitHub();
 }
+updateStatus();
 </script>
 </body>
 </html>
