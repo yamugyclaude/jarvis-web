@@ -1,25 +1,29 @@
-name: 텔레그램 chat_id 진단 (임시)
+name: 텔레그램 시크릿 등록 (임시)
 
 on:
   workflow_dispatch:
     inputs:
       bot_token:
-        description: '봇 토큰 (일회성 진단용)'
+        description: '봇 토큰'
+        required: true
+      chat_id:
+        description: 'chat_id'
         required: true
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
-  diag:
+  set-secrets:
     runs-on: ubuntu-latest
     steps:
-      - name: 상태 조회
+      - name: gh CLI로 시크릿 등록
         env:
+          GH_TOKEN: ${{ github.token }}
           BT: ${{ github.event.inputs.bot_token }}
+          CID: ${{ github.event.inputs.chat_id }}
         run: |
-          echo "=== getMe ==="
-          curl -sS "https://api.telegram.org/bot${BT}/getMe"
-          echo ""
-          echo "=== getWebhookInfo ==="
-          curl -sS "https://api.telegram.org/bot${BT}/getWebhookInfo"
-          echo ""
-          echo "=== getUpdates (offset=-1, limit=5) ==="
-          curl -sS "https://api.telegram.org/bot${BT}/getUpdates?offset=-1&limit=5"
+          echo "$BT" | gh secret set TELEGRAM_BOT_TOKEN --repo yamugyclaude/jarvis-web
+          echo "$CID" | gh secret set TELEGRAM_CHAT_ID --repo yamugyclaude/jarvis-web
+          echo "완료"
