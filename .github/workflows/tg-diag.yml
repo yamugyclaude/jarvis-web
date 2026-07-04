@@ -1,0 +1,22 @@
+name: 텔레그램 chat_id 진단 (임시)
+
+on:
+  workflow_dispatch:
+    inputs:
+      bot_token:
+        description: '봇 토큰 (일회성 진단용)'
+        required: true
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    steps:
+      - name: getUpdates 조회
+        env:
+          BT: ${{ github.event.inputs.bot_token }}
+        run: |
+          echo "=== getMe ==="
+          curl -sS "https://api.telegram.org/bot${BT}/getMe"
+          echo ""
+          echo "=== getUpdates ==="
+          curl -sS "https://api.telegram.org/bot${BT}/getUpdates"
