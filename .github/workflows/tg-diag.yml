@@ -11,12 +11,15 @@ jobs:
   diag:
     runs-on: ubuntu-latest
     steps:
-      - name: getUpdates 조회
+      - name: 상태 조회
         env:
           BT: ${{ github.event.inputs.bot_token }}
         run: |
           echo "=== getMe ==="
           curl -sS "https://api.telegram.org/bot${BT}/getMe"
           echo ""
-          echo "=== getUpdates ==="
-          curl -sS "https://api.telegram.org/bot${BT}/getUpdates"
+          echo "=== getWebhookInfo ==="
+          curl -sS "https://api.telegram.org/bot${BT}/getWebhookInfo"
+          echo ""
+          echo "=== getUpdates (offset=-1, limit=5) ==="
+          curl -sS "https://api.telegram.org/bot${BT}/getUpdates?offset=-1&limit=5"
