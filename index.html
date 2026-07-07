@@ -187,31 +187,6 @@
     <button class="send-btn" onclick="organizeToday()" style="background:var(--card);color:var(--text);border:1.5px solid var(--border);">🗂 오늘 일지 정리</button>
   </div>
 
-  <!-- 메모 기록 -->
-  <div class="card">
-    <h2>메모 기록</h2>
-    <div class="row">
-      <input type="text" id="noteInput" placeholder="내용을 적으세요..." onkeydown="if(event.key==='Enter') openNotePopup()">
-    </div>
-    <button class="send-btn" onclick="openNotePopup()">기록하기</button>
-  </div>
-
-  <!-- 장소 기록 -->
-  <div class="card">
-    <h2>장소 기록</h2>
-    <div id="nearHint" style="display:none;margin-bottom:8px;font-size:13px;cursor:pointer;
-      padding:8px 12px;border:1.5px dashed var(--arrive);border-radius:var(--input-radius);
-      color:var(--arrive);" onclick="acceptNear()"></div>
-    <div class="row" style="position:relative;">
-      <input type="text" id="placeInput" placeholder="장소 이름 (예: 신혜식당)" autocomplete="off"
-        oninput="onPlaceInput()" onkeydown="onPlaceKey(event)" onfocus="checkNearby()">
-      <div id="placeDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;
-        background:var(--card);border:1.5px solid var(--border);border-radius:var(--input-radius);
-        z-index:50;max-height:180px;overflow-y:auto;margin-top:2px;"></div>
-    </div>
-    <button class="send-btn" onclick="sendPlace()">장소 기록</button>
-  </div>
-
   <!-- 조회 결과 -->
   <div class="diary-view" id="diaryView">
     <div class="diary-header">
@@ -241,6 +216,31 @@
         <button class="view-btn" style="flex:0 0 auto;padding:10px 16px;" onclick="addPastItem()">추가</button>
       </div>
     </div>
+  </div>
+
+  <!-- 메모 기록 -->
+  <div class="card">
+    <h2>메모 기록</h2>
+    <div class="row">
+      <input type="text" id="noteInput" placeholder="내용을 적으세요..." onkeydown="if(event.key==='Enter') openNotePopup()">
+    </div>
+    <button class="send-btn" onclick="openNotePopup()">기록하기</button>
+  </div>
+
+  <!-- 장소 기록 -->
+  <div class="card">
+    <h2>장소 기록</h2>
+    <div id="nearHint" style="display:none;margin-bottom:8px;font-size:13px;cursor:pointer;
+      padding:8px 12px;border:1.5px dashed var(--arrive);border-radius:var(--input-radius);
+      color:var(--arrive);" onclick="acceptNear()"></div>
+    <div class="row" style="position:relative;">
+      <input type="text" id="placeInput" placeholder="장소 이름 (예: 신혜식당)" autocomplete="off"
+        oninput="onPlaceInput()" onkeydown="onPlaceKey(event)" onfocus="checkNearby()">
+      <div id="placeDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;
+        background:var(--card);border:1.5px solid var(--border);border-radius:var(--input-radius);
+        z-index:50;max-height:180px;overflow-y:auto;margin-top:2px;"></div>
+    </div>
+    <button class="send-btn" onclick="sendPlace()">장소 기록</button>
   </div>
 
   <div id="result"></div>
