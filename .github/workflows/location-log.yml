@@ -62,9 +62,12 @@ jobs:
       - name: 텔레그램 알림
         if: env.SUMMARY != ''
         env:
-          TG_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
-          TG_CHAT: ${{ secrets.TELEGRAM_CHAT_ID }}
+          TG_TOKEN_RAW: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TG_CHAT_RAW: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: |
+          # 시크릿 값에 섞여들 수 있는 개행/공백 제거 (복사-붙여넣기 시 흔한 오염 방지)
+          TG_TOKEN=$(printf '%s' "$TG_TOKEN_RAW" | tr -d '\n\r ')
+          TG_CHAT=$(printf '%s' "$TG_CHAT_RAW" | tr -d '\n\r ')
           curl -sS -X POST "https://api.telegram.org/bot${TG_TOKEN}/sendMessage" \
             -d chat_id="${TG_CHAT}" \
             --data-urlencode "text=${SUMMARY}"
