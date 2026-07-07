@@ -193,13 +193,19 @@
     </div>
   </div>
 
-  <!-- 메모 기록 -->
+  <!-- 일지 조회 -->
   <div class="card">
-    <h2>메모 기록</h2>
-    <div class="row">
-      <input type="text" id="noteInput" placeholder="내용을 적으세요..." onkeydown="if(event.key==='Enter') openNotePopup()">
+    <h2>📋 일지 조회</h2>
+    <div class="view-row" style="margin-bottom:8px;">
+      <button class="view-btn" onclick="viewDiary(0)">📅 오늘</button>
+      <button class="view-btn" onclick="viewDiary(-1)">📅 어제</button>
+      <button class="view-btn" onclick="viewDiary(-2)">📅 그제</button>
     </div>
-    <button class="send-btn" onclick="openNotePopup()">기록하기</button>
+    <div class="view-row" style="margin-bottom:8px;">
+      <input type="date" id="diaryDatePick" style="flex:1;">
+      <button class="view-btn" style="flex:0 0 auto;padding:10px 16px;" onclick="viewDiaryPicked()">조회</button>
+    </div>
+    <button class="send-btn" onclick="organizeToday()" style="background:var(--card);color:var(--text);border:1.5px solid var(--border);">🗂 오늘 일지 정리</button>
   </div>
 
   <!-- 장소 기록 -->
@@ -218,19 +224,13 @@
     <button class="send-btn" onclick="sendPlace()">장소 기록</button>
   </div>
 
-  <!-- 일지 조회 -->
+  <!-- 메모 기록 -->
   <div class="card">
-    <h2>📋 일지 조회</h2>
-    <div class="view-row" style="margin-bottom:8px;">
-      <button class="view-btn" onclick="viewDiary(0)">📅 오늘</button>
-      <button class="view-btn" onclick="viewDiary(-1)">📅 어제</button>
-      <button class="view-btn" onclick="viewDiary(-2)">📅 그제</button>
+    <h2>메모 기록</h2>
+    <div class="row">
+      <input type="text" id="noteInput" placeholder="내용을 적으세요..." onkeydown="if(event.key==='Enter') openNotePopup()">
     </div>
-    <div class="view-row" style="margin-bottom:8px;">
-      <input type="date" id="diaryDatePick" style="flex:1;">
-      <button class="view-btn" style="flex:0 0 auto;padding:10px 16px;" onclick="viewDiaryPicked()">조회</button>
-    </div>
-    <button class="send-btn" onclick="organizeToday()" style="background:var(--card);color:var(--text);border:1.5px solid var(--border);">🗂 오늘 일지 정리</button>
+    <button class="send-btn" onclick="openNotePopup()">기록하기</button>
   </div>
 
   <!-- 조회 결과 -->
