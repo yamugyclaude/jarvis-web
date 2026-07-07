@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>자비스 기록 v2026.07.07.2</title>
+  <title>자비스 기록 v2026.07.07.3</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
@@ -15,6 +15,7 @@
     body[data-theme="concierge"]{--bg:oklch(0.985 0.007 75);--card:#ffffff;--text:oklch(0.24 0.01 60);--text2:oklch(0.55 0.02 60);--border:oklch(0.92 0.008 70);--btn-bg:oklch(0.62 0.13 45);--btn-text:#fff;--arrive:oklch(0.5 0.11 150);--depart:oklch(0.58 0.16 30);--ok-bg:oklch(0.95 0.04 150);--ok-text:oklch(0.42 0.11 150);--err-bg:oklch(0.95 0.045 30);--err-text:oklch(0.5 0.16 30);--meta-bg:oklch(0.97 0.006 70);--shadow:0 1px 3px rgba(60,40,20,0.08);--radius:18px;--input-radius:12px;--font:'Pretendard',sans-serif;--head:'Pretendard',sans-serif;--mono:'JetBrains Mono',monospace;--page:oklch(0.955 0.006 70);--grid:none;--accent:oklch(0.62 0.13 45);--label-tt:uppercase;--label-sp:0.5px;}
     body[data-theme="hud"]{--bg:oklch(0.15 0.012 250);--card:oklch(0.19 0.012 250);--text:oklch(0.92 0.01 220);--text2:oklch(0.6 0.02 220);--border:oklch(0.34 0.02 220);--btn-bg:oklch(0.78 0.13 200);--btn-text:oklch(0.15 0.012 250);--arrive:oklch(0.82 0.13 200);--depart:oklch(0.72 0.16 25);--ok-bg:oklch(0.3 0.05 200);--ok-text:oklch(0.85 0.13 200);--err-bg:oklch(0.3 0.08 25);--err-text:oklch(0.82 0.14 25);--meta-bg:oklch(0.22 0.012 250);--shadow:0 0 0 1px oklch(0.3 0.02 220);--radius:10px;--input-radius:8px;--font:'Pretendard',sans-serif;--head:'Space Grotesk',sans-serif;--mono:'JetBrains Mono',monospace;--page:oklch(0.1 0.01 250);--grid:linear-gradient(oklch(0.2 0.012 250) 1px,transparent 1px),linear-gradient(90deg,oklch(0.2 0.012 250) 1px,transparent 1px);--accent:oklch(0.78 0.13 200);--label-tt:uppercase;--label-sp:1.5px;}
     body[data-theme="calm"]{--bg:oklch(0.985 0.003 255);--card:oklch(0.985 0.003 255);--text:oklch(0.26 0.01 255);--text2:oklch(0.58 0.01 255);--border:oklch(0.9 0.004 255);--btn-bg:oklch(0.5 0.06 155);--btn-text:#fff;--arrive:oklch(0.5 0.09 150);--depart:oklch(0.55 0.1 30);--ok-bg:oklch(0.96 0.02 155);--ok-text:oklch(0.42 0.07 155);--err-bg:oklch(0.96 0.02 30);--err-text:oklch(0.5 0.12 30);--meta-bg:oklch(0.97 0.003 255);--shadow:none;--radius:14px;--input-radius:12px;--font:'Pretendard',sans-serif;--head:'Space Grotesk',sans-serif;--mono:'Space Grotesk',sans-serif;--page:oklch(0.965 0.003 255);--grid:none;--accent:oklch(0.5 0.06 155);--label-tt:none;--label-sp:0;}
+    body[data-theme="apple"]{--bg:#ffffff;--card:#ffffff;--text:oklch(0.2 0.003 255);--text2:oklch(0.53 0.006 255);--border:oklch(0.91 0.003 255);--btn-bg:oklch(0.58 0.19 260);--btn-text:#fff;--arrive:oklch(0.66 0.17 145);--depart:oklch(0.63 0.22 25);--ok-bg:oklch(0.95 0.05 145);--ok-text:oklch(0.45 0.14 145);--err-bg:oklch(0.95 0.05 25);--err-text:oklch(0.52 0.19 25);--meta-bg:oklch(0.965 0.003 255);--shadow:0 1px 2px rgba(0,0,0,0.04),0 6px 20px rgba(0,0,0,0.06);--radius:20px;--input-radius:14px;--font:-apple-system,BlinkMacSystemFont,'SF Pro Display','Pretendard',sans-serif;--head:-apple-system,BlinkMacSystemFont,'SF Pro Display','Pretendard',sans-serif;--mono:'SF Mono','JetBrains Mono',monospace;--page:oklch(0.975 0.002 255);--grid:none;--accent:oklch(0.58 0.19 260);--label-tt:none;--label-sp:0;}
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body{background:var(--page);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;transition:background .25s,color .25s;}
@@ -33,10 +34,11 @@
     .icon-btn{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:var(--input-radius);padding:8px 11px;font-size:13px;cursor:pointer;}
 
     /* 히어로 */
-    #hero-concierge,#hero-hud,#hero-calm{display:none;position:relative;z-index:2;margin-bottom:18px;}
+    #hero-concierge,#hero-hud,#hero-calm,#hero-apple{display:none;position:relative;z-index:2;margin-bottom:18px;}
     body[data-theme="concierge"] #hero-concierge{display:block;}
     body[data-theme="hud"] #hero-hud{display:block;}
     body[data-theme="calm"] #hero-calm{display:flex;justify-content:space-between;align-items:flex-start;}
+    body[data-theme="apple"] #hero-apple{display:block;}
 
     /* 카드 */
     .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:var(--shadow);position:relative;z-index:2;}
@@ -120,12 +122,13 @@
 
   <!-- 헤더 -->
   <div class="header">
-    <div class="brand"><span>🤖</span><span>자비스 기록</span><span class="ver">v2026.07.07.2</span></div>
+    <div class="brand"><span>🤖</span><span>자비스 기록</span><span class="ver">v2026.07.07.3</span></div>
     <div style="display:flex;align-items:center;gap:8px;">
       <div class="moodbar">
         <button class="mood" data-t="concierge" onclick="setTheme('concierge')">비서</button>
         <button class="mood" data-t="hud" onclick="setTheme('hud')">자비스</button>
         <button class="mood" data-t="calm" onclick="setTheme('calm')">조용</button>
+        <button class="mood" data-t="apple" onclick="setTheme('apple')">애플</button>
       </div>
       <button class="icon-btn" onclick="changeToken()">🔑</button>
     </div>
@@ -170,6 +173,17 @@
       <div id="cc-date" style="font-family:var(--head);font-size:40px;font-weight:600;letter-spacing:-0.02em;line-height:1;margin-top:2px;"></div>
     </div>
     <span id="cc-status" style="font-size:12px;color:var(--text2);border:1px solid var(--border);border-radius:20px;padding:6px 13px;"></span>
+  </div>
+
+  <div id="hero-apple" style="border-radius:var(--radius);padding:20px;background:var(--meta-bg);box-shadow:var(--shadow);">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+      <div>
+        <div id="ap-weekday" style="font-size:13px;color:var(--text2);font-weight:600;"></div>
+        <div id="ap-date" style="font-family:var(--head);font-size:30px;font-weight:700;letter-spacing:-0.02em;margin-top:2px;"></div>
+        <div style="font-size:14px;color:var(--text2);margin-top:6px;">사장님, 어서오세요</div>
+      </div>
+      <span id="ap-status" style="font-size:12px;font-weight:600;color:var(--accent);background:var(--card);border-radius:20px;padding:6px 14px;"></span>
+    </div>
   </div>
 
   <!-- 일지 조회 -->
@@ -245,7 +259,7 @@
 
   <div id="result"></div>
 
-  <div class="footer">v2026.07.07.2 · 조회 / 메모 / 장소 · 무드 3종(비서·자비스·조용)</div>
+  <div class="footer">v2026.07.07.3 · 조회 / 메모 / 장소 · 무드 4종(비서·자비스·조용·애플)</div>
 </div>
 
 <!-- 메모 섹션 확인 팝업 -->
@@ -339,6 +353,7 @@ function updateStatus() {
   const on = !!getToken();
   const cc = document.getElementById('cc-status'); if (cc) cc.textContent = on ? '● 연결됨' : '토큰 필요';
   const hh = document.getElementById('hh-status'); if (hh) hh.textContent = on ? 'ONLINE' : 'NO TOKEN';
+  const ap = document.getElementById('ap-status'); if (ap) ap.textContent = on ? '● 연결됨' : '토큰 필요';
 }
 const WD = ['일','월','화','수','목','금','토'];
 function fillDates() {
@@ -349,6 +364,8 @@ function fillDates() {
   const hhd = document.getElementById('hh-date'); if (hhd) hhd.textContent = `${String(mo).padStart(2,'0')}.${String(da).padStart(2,'0')}`;
   const ccw = document.getElementById('cc-weekday'); if (ccw) ccw.textContent = `${wd}요일`;
   const ccd = document.getElementById('cc-date'); if (ccd) ccd.textContent = `${mo}. ${da}`;
+  const apw = document.getElementById('ap-weekday'); if (apw) apw.textContent = `${wd}요일`;
+  const apd = document.getElementById('ap-date'); if (apd) apd.textContent = `${mo}월 ${da}일`;
   tick();
 }
 let _clk;
