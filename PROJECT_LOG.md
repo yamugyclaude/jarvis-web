@@ -114,3 +114,26 @@
 ### 배포 이력
 - 버전: v2026.07.07.3 → v2026.07.08.1
 - 배포 일시: 2026-07-08
+
+## 2026-07-08 재발 — 장소기록·자동정리 422 오류 근본 수정
+### 작업 내용
+- 사장님 재보고: "메모기록 오류, 장소기록 오류, 텔레그램 안옴, 자동기록 안됨" — 토큰 재발급 이후에도 재발
+
+### 결과
+- 사장님이 실제 오류 문구(`오류 422: unexpected inputs provided: category`)를 확인해줘서 원인 확정: 토큰 문제가 아니라 **코드 버그**.
+  - `confirmCategory()`(신규 장소 카테고리 기록)가 `category` 입력을 dispatch로 보내는데, `.github/workflows/location-log.yml`의 `workflow_dispatch.inputs`에 `category`가 선언되어 있지 않아 GitHub가 요청 자체를 422로 거부(run이 아예 안 생김).
+  - `organizeToday()`("오늘 일지 정리")도 마찬가지로 `organize` 입력이 미선언 상태라 422. 게다가 백엔드(`scripts/log_location.py`)에 organize 처리 로직이 원래 전혀 없었음 — 프론트 확인 문구만 있고 기능 자체가 미구현이었음.
+  - 텔레그램 미수신은 위 422로 인해 run 자체가 안 생겨서 스크립트가 안 도는 것의 결과 — 별도 원인 아님.
+  - 메모 기록(`note`+`section`)은 원래도 정상 선언된 입력이라 422 사유 없음 — 코드상 문제 없는 것으로 결론.
+- 조치:
+  - `.github/workflows/location-log.yml` (data 브랜치 — 실제 dispatch가 참조, main 사본도 동기화)에 `category`, `organize` 입력 선언 + env 매핑(`CATEGORY`, `ORGANIZE`) 추가.
+  - `scripts/log_location.py`에 `ORGANIZE=true` 처리 로직 신규 구현: 메모함 항목을 기존 `auto_classify()`(키워드+시간대)로 재분류해 대상 섹션으로 이동. 로컬에서 케이스별(이동 있음/없음/기존 메모·장소 기록 회귀) 테스트 완료.
+  - 실제 GitHub Actions로 organize 워크플로를 직접 트리거해 검증: 422 없이 큐잉→실행→success, 텔레그램 알림도 정상 발송 확인 (run 28945928569).
+
+### 배운 것 / 반복하면 안 되는 실수
+- "토큰 문제"로 보이는 증상(dispatch가 서버에 안 닿음)이 실제로는 **선언 안 된 input 파라미터로 인한 422**일 수 있음 — 다음부턴 프론트가 보내는 dispatch inputs와 워크플로 YAML의 `inputs` 선언을 먼저 대조할 것.
+- 프론트에 버튼/UI만 만들고 백엔드 처리 로직을 빠뜨린 채 배포된 기능("오늘 일지 정리")이 있었음 — 새 dispatch 액션 추가 시 워크플로 입력 선언 + env 매핑 + 스크립트 로직 3곳을 항상 세트로 확인할 것.
+
+### 배포 이력
+- 커밋: data 브랜치 5f76c63, main 브랜치 3d0b5bd
+- 배포 일시: 2026-07-08 (index.html 버전 변경 없음 — 백엔드/워크플로만 수정)
