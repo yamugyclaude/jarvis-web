@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>자비스 기록 v2026.07.07.3</title>
+  <title>자비스 기록 v2026.07.08.1</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
@@ -66,8 +66,8 @@
     .send-btn:active{opacity:.85;}
     body[data-theme="hud"] .send-btn{font-family:var(--mono);letter-spacing:1px;}
 
-    /* 결과 */
-    #result{margin-top:10px;padding:10px 14px;border-radius:var(--input-radius);font-size:13px;display:none;position:relative;z-index:2;font-family:var(--font);}
+    /* 결과 (상단 고정 토스트 — 스크롤 위치와 무관하게 바로 보이도록) */
+    #result{position:fixed;top:14px;left:50%;transform:translateX(-50%);width:calc(100% - 36px);max-width:564px;margin:0;padding:12px 16px;border-radius:var(--input-radius);font-size:13px;text-align:center;display:none;z-index:100;font-family:var(--font);box-shadow:var(--shadow);}
     #result.ok{background:var(--ok-bg);color:var(--ok-text);}
     #result.err{background:var(--err-bg);color:var(--err-text);}
 
@@ -122,7 +122,7 @@
 
   <!-- 헤더 -->
   <div class="header">
-    <div class="brand"><span>🤖</span><span>자비스 기록</span><span class="ver">v2026.07.07.3</span></div>
+    <div class="brand"><span>🤖</span><span>자비스 기록</span><span class="ver">v2026.07.08.1</span></div>
     <div style="display:flex;align-items:center;gap:8px;">
       <div class="moodbar">
         <button class="mood" data-t="concierge" onclick="setTheme('concierge')">비서</button>
@@ -259,7 +259,7 @@
 
   <div id="result"></div>
 
-  <div class="footer">v2026.07.07.3 · 조회 / 메모 / 장소 · 무드 4종(비서·자비스·조용·애플)</div>
+  <div class="footer">v2026.07.08.1 · 조회 / 메모 / 장소 · 무드 4종(비서·자비스·조용·애플)</div>
 </div>
 
 <!-- 메모 섹션 확인 팝업 -->
