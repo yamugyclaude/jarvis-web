@@ -12,6 +12,7 @@ lng = os.environ.get("LNG", "")
 note = os.environ.get("NOTE", "")
 section = os.environ.get("SECTION", "memo")
 category = os.environ.get("CATEGORY", "")
+organize = os.environ.get("ORGANIZE", "")
 
 # ── 자동 분류 (section이 memo일 때만 적용) ──────────────────────
 def auto_classify(note, time_str):
@@ -267,6 +268,69 @@ elif location:
     else:
         summary = f"✅ {loc_name} {event_label} 기록됨 ({current_time})"
     print(f"✅ 기록 완료: {today} | {event_label} {current_time}")
+
+# ── 오늘 일지 자동 정리 (ORGANIZE=true일 때) ──────────────────
+elif organize == "true":
+    memo_header = section_headers["memo"]
+    header_idx = None
+    for i, line in enumerate(lines):
+        if line.strip() == memo_header:
+            header_idx = i
+            break
+
+    moved = 0
+    if header_idx is not None:
+        end_idx = len(lines)
+        for j in range(header_idx + 1, len(lines)):
+            s = lines[j].strip()
+            if s.startswith("## ") or s.startswith("> 📍"):
+                end_idx = j
+                break
+
+        # 메모함 섹션 안의 "- HH:MM 내용" 항목만 재분류 대상으로 뽑아냄
+        stay = []
+        to_move = []  # (target_section, bullet_line)
+        for line in lines[header_idx + 1:end_idx]:
+            s = line.strip()
+            matched = False
+            if s.startswith("- ") and len(s) > 7 and s[7] == " " and s[4] == ":":
+                item_time, item_note = s[2:7], s[8:]
+                target = auto_classify(item_note, item_time)
+                if target != "memo":
+                    to_move.append((target, line if line.endswith("\n") else line + "\n"))
+                    moved += 1
+                    matched = True
+            if not matched:
+                stay.append(line)
+
+        if moved:
+            lines[header_idx + 1:end_idx] = stay
+            for target, bullet in to_move:
+                header = section_headers[target]
+                h_idx = None
+                for i, line in enumerate(lines):
+                    if line.strip() == header:
+                        h_idx = i
+                        break
+                if h_idx is None:
+                    lines.append(f"\n{header}\n\n{bullet}")
+                    continue
+                e_idx = len(lines)
+                for j in range(h_idx + 1, len(lines)):
+                    s = lines[j].strip()
+                    if s.startswith("## ") or s.startswith("> 📍"):
+                        e_idx = j
+                        break
+                insert_at = e_idx
+                while insert_at - 1 > h_idx and lines[insert_at - 1].strip() == "":
+                    insert_at -= 1
+                lines.insert(insert_at, bullet)
+
+            with open(diary_path, "w", encoding="utf-8") as f:
+                f.writelines(lines)
+
+    summary = f"🗂 오늘 일지 정리 완료 ({moved}건 이동)" if moved else "🗂 오늘 일지 정리 완료 (이동할 항목 없음)"
+    print(summary)
 
 # ── 텔레그램 알림용 요약을 GITHUB_ENV에 기록 ──────────────────
 if not summary:

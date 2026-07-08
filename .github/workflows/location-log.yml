@@ -27,6 +27,12 @@ on:
       section:
         description: '섹션 (work/lunch/dinner/good/learn/tomorrow)'
         required: false
+      category:
+        description: '장소 카테고리 (예: 식당, 카페 등)'
+        required: false
+      organize:
+        description: '오늘 일지 자동 정리 (true)'
+        required: false
 
 permissions:
   contents: write
@@ -49,6 +55,8 @@ jobs:
           LNG: ${{ github.event.inputs.lng }}
           NOTE: ${{ github.event.inputs.note }}
           SECTION: ${{ github.event.inputs.section }}
+          CATEGORY: ${{ github.event.inputs.category }}
+          ORGANIZE: ${{ github.event.inputs.organize }}
         run: python3 scripts/log_location.py
 
       - name: Git 커밋 & 푸시
