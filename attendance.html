@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>출퇴근 현황표 · 자비스 기록</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body[data-theme="concierge"]{--bg:oklch(0.985 0.007 75);--card:#ffffff;--text:oklch(0.24 0.01 60);--text2:oklch(0.55 0.02 60);--border:oklch(0.92 0.008 70);--btn-bg:oklch(0.62 0.13 45);--btn-text:#fff;--arrive:oklch(0.5 0.11 150);--depart:oklch(0.58 0.16 30);--ok-bg:oklch(0.95 0.04 150);--ok-text:oklch(0.42 0.11 150);--err-bg:oklch(0.95 0.045 30);--err-text:oklch(0.5 0.16 30);--meta-bg:oklch(0.97 0.006 70);--shadow:0 1px 3px rgba(60,40,20,0.08);--radius:18px;--input-radius:12px;--font:'Pretendard',sans-serif;--head:'Pretendard',sans-serif;--mono:'JetBrains Mono',monospace;--page:oklch(0.955 0.006 70);--grid:none;--accent:oklch(0.62 0.13 45);--label-tt:uppercase;--label-sp:0.5px;}
+    body[data-theme="hud"]{--bg:oklch(0.15 0.012 250);--card:oklch(0.19 0.012 250);--text:oklch(0.92 0.01 220);--text2:oklch(0.6 0.02 220);--border:oklch(0.34 0.02 220);--btn-bg:oklch(0.78 0.13 200);--btn-text:oklch(0.15 0.012 250);--arrive:oklch(0.82 0.13 200);--depart:oklch(0.72 0.16 25);--ok-bg:oklch(0.3 0.05 200);--ok-text:oklch(0.85 0.13 200);--err-bg:oklch(0.3 0.08 25);--err-text:oklch(0.82 0.14 25);--meta-bg:oklch(0.22 0.012 250);--shadow:0 0 0 1px oklch(0.3 0.02 220);--radius:10px;--input-radius:8px;--font:'Pretendard',sans-serif;--head:'Space Grotesk',sans-serif;--mono:'JetBrains Mono',monospace;--page:oklch(0.1 0.01 250);--grid:linear-gradient(oklch(0.2 0.012 250) 1px,transparent 1px),linear-gradient(90deg,oklch(0.2 0.012 250) 1px,transparent 1px);--accent:oklch(0.78 0.13 200);--label-tt:uppercase;--label-sp:1.5px;}
+    body[data-theme="calm"]{--bg:oklch(0.985 0.003 255);--card:oklch(0.985 0.003 255);--text:oklch(0.26 0.01 255);--text2:oklch(0.58 0.01 255);--border:oklch(0.9 0.004 255);--btn-bg:oklch(0.5 0.06 155);--btn-text:#fff;--arrive:oklch(0.5 0.09 150);--depart:oklch(0.55 0.1 30);--ok-bg:oklch(0.96 0.02 155);--ok-text:oklch(0.42 0.07 155);--err-bg:oklch(0.96 0.02 30);--err-text:oklch(0.5 0.12 30);--meta-bg:oklch(0.97 0.003 255);--shadow:none;--radius:14px;--input-radius:12px;--font:'Pretendard',sans-serif;--head:'Space Grotesk',sans-serif;--mono:'Space Grotesk',sans-serif;--page:oklch(0.965 0.003 255);--grid:none;--accent:oklch(0.5 0.06 155);--label-tt:none;--label-sp:0;}
+    body[data-theme="apple"]{--bg:#ffffff;--card:#ffffff;--text:oklch(0.2 0.003 255);--text2:oklch(0.53 0.006 255);--border:oklch(0.91 0.003 255);--btn-bg:oklch(0.58 0.19 260);--btn-text:#fff;--arrive:oklch(0.66 0.17 145);--depart:oklch(0.63 0.22 25);--ok-bg:oklch(0.95 0.05 145);--ok-text:oklch(0.45 0.14 145);--err-bg:oklch(0.95 0.05 25);--err-text:oklch(0.52 0.19 25);--meta-bg:oklch(0.965 0.003 255);--shadow:0 1px 2px rgba(0,0,0,0.04),0 6px 20px rgba(0,0,0,0.06);--radius:20px;--input-radius:14px;--font:-apple-system,BlinkMacSystemFont,'SF Pro Display','Pretendard',sans-serif;--head:-apple-system,BlinkMacSystemFont,'SF Pro Display','Pretendard',sans-serif;--mono:'SF Mono','JetBrains Mono',monospace;--page:oklch(0.975 0.002 255);--grid:none;--accent:oklch(0.58 0.19 260);--label-tt:none;--label-sp:0;}
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body{background:var(--page);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;transition:background .25s,color .25s;}
+    .container{max-width:600px;margin:0 auto;padding:18px 18px 60px;background-image:var(--grid);background-size:26px 26px;min-height:100vh;position:relative;}
+
+    /* 헤더 */
+    .header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px;position:relative;z-index:2;flex-wrap:wrap;}
+    .brand{display:flex;align-items:center;gap:7px;font-family:var(--head);font-weight:700;font-size:16px;letter-spacing:-0.01em;}
+    .icon-btn{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:var(--input-radius);padding:8px 11px;font-size:13px;cursor:pointer;text-decoration:none;display:inline-block;}
+
+    /* 카드 */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:var(--shadow);position:relative;z-index:2;}
+    h2{font-size:12px;font-weight:700;color:var(--text2);text-transform:var(--label-tt);letter-spacing:var(--label-sp);margin-bottom:12px;font-family:var(--font);}
+    body[data-theme="hud"] h2{color:var(--accent);font-family:var(--mono);}
+    body[data-theme="hud"] h2::before{content:'> ';}
+
+    /* 토큰 배너 */
+    .token-banner{background:var(--card);border:1px solid var(--accent);border-radius:var(--radius);padding:14px;margin-bottom:14px;font-size:13px;color:var(--text);position:relative;z-index:2;}
+    .token-banner input{width:100%;margin-top:8px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--input-radius);font-size:13px;font-family:var(--mono);background:var(--card);color:var(--text);}
+    .token-banner button{margin-top:8px;padding:7px 16px;background:var(--btn-bg);color:var(--btn-text);border:none;border-radius:var(--input-radius);font-size:13px;cursor:pointer;font-family:var(--font);}
+
+    .send-btn{width:100%;padding:12px;background:var(--btn-bg);color:var(--btn-text);border:none;border-radius:var(--input-radius);font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);}
+    .view-row{display:flex;gap:8px;align-items:center;}
+    .view-btn{flex:1;padding:10px;border:1.5px solid var(--border);background:var(--card);color:var(--text);border-radius:var(--input-radius);font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);}
+
+    /* 월 이동 */
+    .month-label{flex:2;text-align:center;font-size:15px;font-weight:700;}
+
+    /* 요약 통계 */
+    .stat-grid{display:flex;gap:8px;}
+    .stat-box{flex:1;background:var(--meta-bg);border-radius:var(--input-radius);padding:12px;text-align:center;}
+    .stat-num{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--accent);}
+    .stat-label{font-size:11px;color:var(--text2);margin-top:4px;}
+
+    /* 달력 */
+    .cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;}
+    .cal-weekday{text-align:center;font-size:11px;color:var(--text2);font-weight:600;}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
+    .cal-cell{aspect-ratio:1;border-radius:var(--input-radius);border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative;}
+    .cal-cell.cal-empty{border-color:transparent;}
+    .cal-daynum{font-size:12px;color:var(--text2);}
+    .cal-cell.cal-worked{background:var(--meta-bg);}
+    .cal-cell.cal-worked .cal-daynum{color:var(--text);font-weight:600;}
+    .cal-cell.cal-today{border-color:var(--accent);border-width:1.5px;}
+    .cal-badge{font-size:10px;font-family:var(--mono);color:var(--ok-text);background:var(--ok-bg);border-radius:6px;padding:1px 4px;}
+
+    .footer{text-align:center;color:var(--text2);font-size:11px;padding:16px 0 20px;position:relative;z-index:2;}
+    body[data-theme="hud"] .footer{font-family:var(--mono);}
+  </style>
+</head>
+<body data-theme="concierge">
+<div class="container">
+
+  <!-- 헤더 -->
+  <div class="header">
+    <div class="brand"><span>📊</span><span>출퇴근 현황표</span></div>
+    <a class="icon-btn" href="index.html">← 돌아가기</a>
+  </div>
+
+  <!-- 토큰 배너 -->
+  <div class="token-banner" id="tokenBanner">
+    <strong>⚙️ 처음 한 번만:</strong> GitHub 토큰을 입력하세요.
+    <input type="password" id="tokenInput" placeholder="ghp_...">
+    <button onclick="saveToken()">저장</button>
+  </div>
+
+  <!-- 월 이동 -->
+  <div class="card">
+    <div class="view-row">
+      <button class="view-btn" style="flex:0 0 auto;padding:10px 16px;" onclick="goMonth(-1)">‹ 이전달</button>
+      <div class="month-label" id="monthLabel"></div>
+      <button class="view-btn" style="flex:0 0 auto;padding:10px 16px;" onclick="goMonth(1)">다음달 ›</button>
+    </div>
+  </div>
+
+  <!-- 요약 통계 -->
+  <div class="card">
+    <h2>📈 이번 달 요약</h2>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-num" id="statDays">-</div><div class="stat-label">총 근무일수</div></div>
+      <div class="stat-box"><div class="stat-num" id="statTotal">-</div><div class="stat-label">총 근무시간</div></div>
+      <div class="stat-box"><div class="stat-num" id="statAvg">-</div><div class="stat-label">평균 근무시간</div></div>
+    </div>
+  </div>
+
+  <!-- 달력 -->
+  <div class="card">
+    <h2>🗓 달력</h2>
+    <div class="cal-weekdays" id="calWeekdays"></div>
+    <div class="cal-grid" id="calGrid"></div>
+  </div>
+
+  <div class="footer">출퇴근 현황표 · diary 프런트매터 기반</div>
+</div>
+
+<script>
+const REPO_OWNER = 'yamugyclaude';
+const REPO_NAME  = 'jarvis-web';
+const REF        = 'data';
+
+// ── 토큰 ──────────────────────────────────────────────────
+function getToken() { return localStorage.getItem('jarvis_gh_token') || ''; }
+function saveToken() {
+  const val = document.getElementById('tokenInput').value.trim().replace(/[^\x20-\x7E]/g, '');
+  if (!val) return;
+  localStorage.setItem('jarvis_gh_token', val);
+  document.getElementById('tokenBanner').style.display = 'none';
+  loadMonth(_curYear, _curMonth);
+}
+function checkToken() {
+  if (getToken()) { document.getElementById('tokenBanner').style.display = 'none'; return true; }
+  document.getElementById('tokenBanner').style.display = 'block';
+  return false;
+}
+
+function ghHeaders() {
+  return { 'Authorization': `token ${getToken().replace(/[^\x20-\x7E]/g, '')}`, 'Accept': 'application/vnd.github+json' };
+}
+
+function parseFrontmatter(text) {
+  const fm = {};
+  const fmMatch = text.match(/^---\n([\s\S]*?)\n---/);
+  if (fmMatch) fmMatch[1].split('\n').forEach(l => {
+    const m = l.match(/^(\w+):\s*"?([^"]*)"?$/);
+    if (m) fm[m[1]] = m[2].trim();
+  });
+  return fm;
+}
+
+function buildDayInfo(fm) {
+  const worked = !!(fm.time_in && fm.time_in.trim());
+  if (!worked) return { worked: false };
+  const inProgress = !fm.time_out || !fm.time_out.trim();
+  let hours = null;
+  if (!inProgress) {
+    const [ih, im] = fm.time_in.split(':').map(Number);
+    const [oh, om] = fm.time_out.split(':').map(Number);
+    const mins = (oh * 60 + om) - (ih * 60 + im);
+    hours = mins > 0 ? mins / 60 : null;
+  }
+  return { worked: true, time_in: fm.time_in, time_out: fm.time_out || '', inProgress, hours };
+}
+
+async function loadMonth(year, month) {
+  if (!checkToken()) return;
+  const y = String(year);
+  const m = String(month).padStart(2, '0');
+  document.getElementById('calGrid').innerHTML = '<p style="grid-column:1/-1;color:var(--text2);font-size:13px;padding:8px 0;">⏳ 불러오는 중...</p>';
+
+  const listUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/diary/${y}/${m}?ref=${REF}`;
+  let listRes;
+  try {
+    listRes = await fetch(listUrl, { headers: ghHeaders() });
+  } catch (e) {
+    document.getElementById('calGrid').innerHTML = `<p style="grid-column:1/-1;color:var(--err-text);font-size:13px;">오류: ${e.message}</p>`;
+    return;
+  }
+
+  let files = [];
+  if (listRes.status === 404) {
+    files = [];
+  } else if (!listRes.ok) {
+    document.getElementById('calGrid').innerHTML = `<p style="grid-column:1/-1;color:var(--err-text);font-size:13px;">오류 ${listRes.status}</p>`;
+    return;
+  } else {
+    const arr = await listRes.json();
+    files = arr.filter(f => f.type === 'file' && /^\d{4}-\d{2}-\d{2}\.md$/.test(f.name));
+  }
+
+  const dayMap = {};
+  await Promise.all(files.map(async f => {
+    const day = f.name.replace('.md', '');
+    try {
+      const fileUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/diary/${y}/${m}/${f.name}?ref=${REF}`;
+      const fileRes = await fetch(fileUrl, { headers: ghHeaders() });
+      if (!fileRes.ok) return;
+      const data = await fileRes.json();
+      const text = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ''))));
+      dayMap[day] = buildDayInfo(parseFrontmatter(text));
+    } catch (e) { /* 이 날짜만 스킵 */ }
+  }));
+
+  renderCalendar(year, month, dayMap);
+  renderSummary(dayMap);
+}
+
+function getKSTToday() {
+  const d = new Date();
+  const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  return kst.toISOString().slice(0, 10);
+}
+
+const WD_LABELS = ['일','월','화','수','목','금','토'];
+function renderWeekdayHeader() {
+  document.getElementById('calWeekdays').innerHTML = WD_LABELS.map(w => `<div class="cal-weekday">${w}</div>`).join('');
+}
+
+function renderCalendar(year, month, dayMap) {
+  const first = new Date(Date.UTC(year, month - 1, 1));
+  const firstWeekday = first.getUTCDay();
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const todayStr = getKSTToday();
+
+  let cells = [];
+  for (let i = 0; i < firstWeekday; i++) cells.push('<div class="cal-cell cal-empty"></div>');
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    cells.push(renderDayCell(d, dayMap[dateStr], dateStr === todayStr));
+  }
+  while (cells.length % 7 !== 0) cells.push('<div class="cal-cell cal-empty"></div>');
+
+  document.getElementById('calGrid').innerHTML = cells.join('');
+}
+
+function renderDayCell(d, info, isToday) {
+  let cls = 'cal-cell' + (isToday ? ' cal-today' : '');
+  let badge = '';
+  if (info && info.worked) {
+    cls += ' cal-worked';
+    if (info.inProgress) badge = '<div class="cal-badge">근무중</div>';
+    else if (info.hours != null) badge = `<div class="cal-badge">${info.hours.toFixed(1)}h</div>`;
+  }
+  return `<div class="${cls}"><div class="cal-daynum">${d}</div>${badge}</div>`;
+}
+
+function renderSummary(dayMap) {
+  const workedDays = Object.values(dayMap).filter(x => x.worked);
+  const count = workedDays.length;
+  const finished = workedDays.filter(x => x.hours != null);
+  const totalHours = finished.reduce((s, x) => s + x.hours, 0);
+  const avgHours = finished.length ? totalHours / finished.length : 0;
+
+  document.getElementById('statDays').textContent = `${count}일`;
+  document.getElementById('statTotal').textContent = `${totalHours.toFixed(1)}시간`;
+  document.getElementById('statAvg').textContent = finished.length ? `${avgHours.toFixed(1)}시간` : '-';
+}
+
+let _curYear, _curMonth;
+function goMonth(delta) {
+  _curMonth += delta;
+  if (_curMonth > 12) { _curMonth = 1; _curYear++; }
+  if (_curMonth < 1) { _curMonth = 12; _curYear--; }
+  document.getElementById('monthLabel').textContent = `${_curYear}년 ${_curMonth}월`;
+  loadMonth(_curYear, _curMonth);
+}
+
+// ── 초기화 ──────────────────────────────────────────────
+document.body.dataset.theme = localStorage.getItem('jarvis_theme_v2') || 'concierge';
+renderWeekdayHeader();
+const now = new Date(Date.now() + 9 * 60 * 60 * 1000);
+_curYear = now.getUTCFullYear(); _curMonth = now.getUTCMonth() + 1;
+document.getElementById('monthLabel').textContent = `${_curYear}년 ${_curMonth}월`;
+if (getToken()) loadMonth(_curYear, _curMonth); else checkToken();
+</script>
+</body>
+</html>
