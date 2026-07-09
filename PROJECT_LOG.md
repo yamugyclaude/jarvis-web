@@ -177,3 +177,21 @@
 ### 배포 이력
 - 버전: v2026.07.08.2 → v2026.07.09.1
 - 배포 일시: 2026-07-09
+
+## 2026-07-09 출퇴근 현황표 날짜 클릭 → 일지 조회/수정 연결
+
+### 작업 내용
+- 사장님 요청: 출퇴근 현황표에서 날짜를 클릭하면 그날의 행적이 나오고 수정도 가능하게.
+- index.html의 기존 "일지 조회" 기능(`loadDiary()` — GitHub diary 파일 조회, 항목별 수정/삭제, 신규 항목 추가까지 이미 완성)을 그대로 재사용하기로 설계. attendance.html에 편집 로직을 중복 구현하지 않음.
+
+### 결과
+- 성공: `attendance.html`의 `renderDayCell(d, info, isToday)` → `renderDayCell(d, dateStr, info, isToday)`로 시그니처 변경(연/월 조합한 `dateStr`을 `renderCalendar`에서 그대로 전달), 각 날짜 셀에 `onclick="location.href='index.html?date=YYYY-MM-DD'"` 추가 + `.cal-cell{cursor:pointer}` CSS 추가. 빈 채움 칸(`cal-empty`)은 별도 렌더링 경로라 자동으로 클릭 제외됨. 근무일 여부 상관없이 모든 날짜 클릭 가능(데이터 없는 날은 `loadDiary`가 404를 "기록 없음, 추가 가능"으로 정상 처리).
+- `index.html` 초기화 스크립트 끝에 `?date=` 쿼리 파라미터를 읽어 있으면 `loadDiary(date)`를 자동 호출하는 3줄 추가. `loadDiary` 내부에서 이미 토큰 체크를 하므로 토큰 없을 때도 배너만 뜨고 안전하게 종료.
+- 두 파일 모두 `<script>` 추출 후 `node --check` 통과. 실제 브라우저·GitHub 토큰을 통한 클릭→이동→조회 라이브 검증은 builder 환경에서 불가 — 비서가 별도로 진행.
+
+### 배운 것 / 반복하면 안 되는 실수
+- 없음(계획대로 순조롭게 진행, 기존 안정화된 로직 재사용으로 리스크 최소화).
+
+### 배포 이력
+- 버전: v2026.07.09.1 → v2026.07.09.2
+- 배포 일시: 2026-07-09

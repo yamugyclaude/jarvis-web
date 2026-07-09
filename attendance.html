@@ -51,7 +51,7 @@
     .cal-weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:6px;}
     .cal-weekday{text-align:center;font-size:11px;color:var(--text2);font-weight:600;}
     .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;}
-    .cal-cell{aspect-ratio:1;border-radius:var(--input-radius);border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative;}
+    .cal-cell{aspect-ratio:1;border-radius:var(--input-radius);border:1px solid var(--border);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;position:relative;cursor:pointer;}
     .cal-cell.cal-empty{border-color:transparent;}
     .cal-daynum{font-size:12px;color:var(--text2);}
     .cal-cell.cal-worked{background:var(--meta-bg);}
@@ -220,14 +220,14 @@ function renderCalendar(year, month, dayMap) {
   for (let i = 0; i < firstWeekday; i++) cells.push('<div class="cal-cell cal-empty"></div>');
   for (let d = 1; d <= daysInMonth; d++) {
     const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    cells.push(renderDayCell(d, dayMap[dateStr], dateStr === todayStr));
+    cells.push(renderDayCell(d, dateStr, dayMap[dateStr], dateStr === todayStr));
   }
   while (cells.length % 7 !== 0) cells.push('<div class="cal-cell cal-empty"></div>');
 
   document.getElementById('calGrid').innerHTML = cells.join('');
 }
 
-function renderDayCell(d, info, isToday) {
+function renderDayCell(d, dateStr, info, isToday) {
   let cls = 'cal-cell' + (isToday ? ' cal-today' : '');
   let badge = '';
   if (info && info.worked) {
@@ -235,7 +235,7 @@ function renderDayCell(d, info, isToday) {
     if (info.inProgress) badge = '<div class="cal-badge">근무중</div>';
     else if (info.hours != null) badge = `<div class="cal-badge">${info.hours.toFixed(1)}h</div>`;
   }
-  return `<div class="${cls}"><div class="cal-daynum">${d}</div>${badge}</div>`;
+  return `<div class="${cls}" onclick="location.href='index.html?date=${dateStr}'"><div class="cal-daynum">${d}</div>${badge}</div>`;
 }
 
 function renderSummary(dayMap) {
