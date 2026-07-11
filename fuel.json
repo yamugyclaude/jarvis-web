@@ -1,0 +1,18 @@
+{
+  "vehicles": {
+    "테스트차량": {
+      "records": [
+        {
+          "date": "2026-07-11",
+          "time": "12:01",
+          "liters": 10.0,
+          "cost": "15000",
+          "odometer": 1000.0,
+          "km_driven": null,
+          "efficiency": null,
+          "created_at": "2026-07-11 12:01"
+        }
+      ]
+    }
+  }
+}
