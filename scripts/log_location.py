@@ -13,6 +13,10 @@ note = os.environ.get("NOTE", "")
 section = os.environ.get("SECTION", "memo")
 category = os.environ.get("CATEGORY", "")
 organize = os.environ.get("ORGANIZE", "")
+vehicle = os.environ.get("VEHICLE", "")
+liters = os.environ.get("LITERS", "")
+cost = os.environ.get("COST", "")
+odometer = os.environ.get("ODOMETER", "")
 
 # ── 자동 분류 (section이 memo일 때만 적용) ──────────────────────
 def auto_classify(note, time_str):
@@ -331,6 +335,54 @@ elif organize == "true":
 
     summary = f"🗂 오늘 일지 정리 완료 ({moved}건 이동)" if moved else "🗂 오늘 일지 정리 완료 (이동할 항목 없음)"
     print(summary)
+
+# ── 주유 기록 & 연비 계산 (VEHICLE/LITERS/ODOMETER가 있을 때) ──
+elif vehicle and liters and odometer:
+    fuel_file = "fuel.json"
+    if os.path.exists(fuel_file):
+        with open(fuel_file, "r", encoding="utf-8") as f:
+            fuel_data = json.load(f)
+    else:
+        fuel_data = {"vehicles": {}}
+    if "vehicles" not in fuel_data:
+        fuel_data["vehicles"] = {}
+    if vehicle not in fuel_data["vehicles"]:
+        fuel_data["vehicles"][vehicle] = {"records": []}
+
+    records = fuel_data["vehicles"][vehicle]["records"]
+    liters_f = float(liters)
+    odometer_f = float(odometer)
+
+    km_driven = None
+    efficiency = None
+    if records:
+        last_odometer = records[-1].get("odometer")
+        if last_odometer is not None:
+            diff = odometer_f - float(last_odometer)
+            if diff > 0:
+                km_driven = diff
+                efficiency = round(km_driven / liters_f, 2) if liters_f > 0 else None
+
+    record = {
+        "date": today,
+        "time": current_time,
+        "liters": liters_f,
+        "cost": cost,
+        "odometer": odometer_f,
+        "km_driven": km_driven,
+        "efficiency": efficiency,
+        "created_at": now.strftime("%Y-%m-%d %H:%M"),
+    }
+    records.append(record)
+
+    with open(fuel_file, "w", encoding="utf-8") as f:
+        json.dump(fuel_data, f, ensure_ascii=False, indent=2)
+
+    if efficiency is not None:
+        summary = f"⛽ {vehicle} {liters}L {cost}원 {odometer}km → 연비 {efficiency:.1f}km/L"
+    else:
+        summary = f"⛽ {vehicle} {liters}L {cost}원 {odometer}km (첫 기록 또는 연비 계산 불가)"
+    print(f"✅ 주유 기록 완료: {vehicle} {liters}L, 연비={efficiency}")
 
 # ── 텔레그램 알림용 요약을 GITHUB_ENV에 기록 ──────────────────
 if not summary:
