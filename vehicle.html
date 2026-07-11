@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>차량 관리 · 자비스 기록</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body[data-theme="concierge"]{--bg:oklch(0.985 0.007 75);--card:#ffffff;--text:oklch(0.24 0.01 60);--text2:oklch(0.55 0.02 60);--border:oklch(0.92 0.008 70);--btn-bg:oklch(0.62 0.13 45);--btn-text:#fff;--arrive:oklch(0.5 0.11 150);--depart:oklch(0.58 0.16 30);--ok-bg:oklch(0.95 0.04 150);--ok-text:oklch(0.42 0.11 150);--err-bg:oklch(0.95 0.045 30);--err-text:oklch(0.5 0.16 30);--meta-bg:oklch(0.97 0.006 70);--shadow:0 1px 3px rgba(60,40,20,0.08);--radius:18px;--input-radius:12px;--font:'Pretendard',sans-serif;--head:'Pretendard',sans-serif;--mono:'JetBrains Mono',monospace;--page:oklch(0.955 0.006 70);--grid:none;--accent:oklch(0.62 0.13 45);--label-tt:uppercase;--label-sp:0.5px;}
+    body[data-theme="hud"]{--bg:oklch(0.15 0.012 250);--card:oklch(0.19 0.012 250);--text:oklch(0.92 0.01 220);--text2:oklch(0.6 0.02 220);--border:oklch(0.34 0.02 220);--btn-bg:oklch(0.78 0.13 200);--btn-text:oklch(0.15 0.012 250);--arrive:oklch(0.82 0.13 200);--depart:oklch(0.72 0.16 25);--ok-bg:oklch(0.3 0.05 200);--ok-text:oklch(0.85 0.13 200);--err-bg:oklch(0.3 0.08 25);--err-text:oklch(0.82 0.14 25);--meta-bg:oklch(0.22 0.012 250);--shadow:0 0 0 1px oklch(0.3 0.02 220);--radius:10px;--input-radius:8px;--font:'Pretendard',sans-serif;--head:'Space Grotesk',sans-serif;--mono:'JetBrains Mono',monospace;--page:oklch(0.1 0.01 250);--grid:linear-gradient(oklch(0.2 0.012 250) 1px,transparent 1px),linear-gradient(90deg,oklch(0.2 0.012 250) 1px,transparent 1px);--accent:oklch(0.78 0.13 200);--label-tt:uppercase;--label-sp:1.5px;}
+    body[data-theme="calm"]{--bg:oklch(0.985 0.003 255);--card:oklch(0.985 0.003 255);--text:oklch(0.26 0.01 255);--text2:oklch(0.58 0.01 255);--border:oklch(0.9 0.004 255);--btn-bg:oklch(0.5 0.06 155);--btn-text:#fff;--arrive:oklch(0.5 0.09 150);--depart:oklch(0.55 0.1 30);--ok-bg:oklch(0.96 0.02 155);--ok-text:oklch(0.42 0.07 155);--err-bg:oklch(0.96 0.02 30);--err-text:oklch(0.5 0.12 30);--meta-bg:oklch(0.97 0.003 255);--shadow:none;--radius:14px;--input-radius:12px;--font:'Pretendard',sans-serif;--head:'Space Grotesk',sans-serif;--mono:'Space Grotesk',sans-serif;--page:oklch(0.965 0.003 255);--grid:none;--accent:oklch(0.5 0.06 155);--label-tt:none;--label-sp:0;}
+    body[data-theme="apple"]{--bg:#ffffff;--card:#ffffff;--text:oklch(0.2 0.003 255);--text2:oklch(0.53 0.006 255);--border:oklch(0.91 0.003 255);--btn-bg:oklch(0.58 0.19 260);--btn-text:#fff;--arrive:oklch(0.66 0.17 145);--depart:oklch(0.63 0.22 25);--ok-bg:oklch(0.95 0.05 145);--ok-text:oklch(0.45 0.14 145);--err-bg:oklch(0.95 0.05 25);--err-text:oklch(0.52 0.19 25);--meta-bg:oklch(0.965 0.003 255);--shadow:0 1px 2px rgba(0,0,0,0.04),0 6px 20px rgba(0,0,0,0.06);--radius:20px;--input-radius:14px;--font:-apple-system,BlinkMacSystemFont,'SF Pro Display','Pretendard',sans-serif;--head:-apple-system,BlinkMacSystemFont,'SF Pro Display','Pretendard',sans-serif;--mono:'SF Mono','JetBrains Mono',monospace;--page:oklch(0.975 0.002 255);--grid:none;--accent:oklch(0.58 0.19 260);--label-tt:none;--label-sp:0;}
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body{background:var(--page);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;transition:background .25s,color .25s;}
+    .mono{font-family:var(--mono);}
+    .container{max-width:600px;margin:0 auto;padding:18px 18px 60px;background-image:var(--grid);background-size:26px 26px;min-height:100vh;position:relative;}
+
+    /* 헤더 */
+    .header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px;position:relative;z-index:2;flex-wrap:wrap;}
+    .brand{display:flex;align-items:center;gap:7px;font-family:var(--head);font-weight:700;font-size:16px;letter-spacing:-0.01em;}
+    .icon-btn{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:var(--input-radius);padding:8px 11px;font-size:13px;cursor:pointer;text-decoration:none;display:inline-block;}
+
+    /* 카드 */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:var(--shadow);position:relative;z-index:2;}
+    h2{font-size:12px;font-weight:700;color:var(--text2);text-transform:var(--label-tt);letter-spacing:var(--label-sp);margin-bottom:12px;font-family:var(--font);}
+    body[data-theme="hud"] h2{color:var(--accent);font-family:var(--mono);}
+    body[data-theme="hud"] h2::before{content:'> ';}
+
+    /* 토큰 배너 */
+    .token-banner{background:var(--card);border:1px solid var(--accent);border-radius:var(--radius);padding:14px;margin-bottom:14px;font-size:13px;color:var(--text);position:relative;z-index:2;}
+    .token-banner input{width:100%;margin-top:8px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--input-radius);font-size:13px;font-family:var(--mono);background:var(--card);color:var(--text);}
+    .token-banner button{margin-top:8px;padding:7px 16px;background:var(--btn-bg);color:var(--btn-text);border:none;border-radius:var(--input-radius);font-size:13px;cursor:pointer;font-family:var(--font);}
+
+    /* 인풋 */
+    .row{display:flex;gap:8px;margin-bottom:10px;}
+    input[type=text],input[type=number],select{padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--input-radius);font-size:14px;background:var(--card);color:var(--text);font-family:var(--font);width:100%;}
+    input:focus,select:focus{outline:none;border-color:var(--accent);}
+    select{cursor:pointer;}
+
+    /* 전송 버튼 */
+    .send-btn{width:100%;padding:12px;background:var(--btn-bg);color:var(--btn-text);border:none;border-radius:var(--input-radius);font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);}
+    .send-btn:active{opacity:.85;}
+    body[data-theme="hud"] .send-btn{font-family:var(--mono);letter-spacing:1px;}
+
+    /* 요약 통계 */
+    .stat-grid{display:flex;gap:8px;margin-bottom:12px;}
+    .stat-box{flex:1;background:var(--meta-bg);border-radius:var(--input-radius);padding:12px;text-align:center;}
+    .stat-num{font-family:var(--mono);font-size:16px;font-weight:700;color:var(--accent);}
+    .stat-label{font-size:11px;color:var(--text2);margin-top:4px;}
+
+    /* 이력 목록 */
+    .hist-row{display:flex;justify-content:space-between;gap:6px;padding:8px 0;border-bottom:1px solid var(--border);font-size:13px;}
+    .hist-row:last-child{border-bottom:none;}
+    .hist-eff{color:var(--accent);font-weight:700;font-family:var(--mono);}
+
+    /* 결과 토스트 */
+    #result{position:fixed;top:14px;left:50%;transform:translateX(-50%);width:calc(100% - 36px);max-width:564px;margin:0;padding:12px 16px;border-radius:var(--input-radius);font-size:13px;text-align:center;display:none;z-index:100;font-family:var(--font);box-shadow:var(--shadow);}
+    #result.ok{background:var(--ok-bg);color:var(--ok-text);}
+    #result.err{background:var(--err-bg);color:var(--err-text);}
+
+    .footer{text-align:center;color:var(--text2);font-size:11px;padding:16px 0 20px;position:relative;z-index:2;}
+    body[data-theme="hud"] .footer{font-family:var(--mono);}
+  </style>
+</head>
+<body data-theme="concierge">
+<div class="container">
+
+  <!-- 헤더 -->
+  <div class="header">
+    <div class="brand"><span>⛽</span><span>차량 관리</span></div>
+    <a class="icon-btn" href="index.html">← 돌아가기</a>
+  </div>
+
+  <!-- 토큰 배너 -->
+  <div class="token-banner" id="tokenBanner">
+    <strong>⚙️ 처음 한 번만:</strong> GitHub 토큰을 입력하세요.
+    <input type="password" id="tokenInput" placeholder="ghp_...">
+    <button onclick="saveToken()">저장</button>
+  </div>
+
+  <!-- 차량 선택 -->
+  <div class="card">
+    <h2>🚗 차량 선택</h2>
+    <div class="row">
+      <select id="vehicleSelect" onchange="onVehicleChange()"></select>
+    </div>
+    <div class="row" id="newVehicleWrap" style="display:none;">
+      <input type="text" id="newVehicleInput" placeholder="새 차량 이름 (예: 소나타)">
+    </div>
+  </div>
+
+  <!-- 주유 기록 입력 -->
+  <div class="card">
+    <h2>⛽ 주유 기록</h2>
+    <div class="row">
+      <input type="number" id="litersInput" step="0.1" placeholder="리터 (L)">
+      <input type="number" id="costInput" placeholder="금액 (원)">
+    </div>
+    <div class="row">
+      <input type="number" id="odometerInput" placeholder="누적 키로수 (km)">
+    </div>
+    <button class="send-btn" onclick="submitFuel()">⛽ 기록하기</button>
+  </div>
+
+  <!-- 연비 이력 -->
+  <div class="card">
+    <h2>📈 연비 이력</h2>
+    <div class="stat-grid" id="historyStats"></div>
+    <div id="historyBody"><p style="color:var(--text2);font-size:13px;padding:8px 0;">⏳ 불러오는 중...</p></div>
+  </div>
+
+  <div id="result"></div>
+
+  <div class="footer">차량 관리 · 주유 기록 기반 연비 계산</div>
+</div>
+
+<script>
+const REPO_OWNER = 'yamugyclaude';
+const REPO_NAME  = 'jarvis-web';
+const WORKFLOW   = 'location-log.yml';
+const REF        = 'data';
+const API_URL    = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${WORKFLOW}/dispatches`;
+
+// ── 토큰 ──────────────────────────────────────────────────
+function getToken() { return localStorage.getItem('jarvis_gh_token') || ''; }
+function saveToken() {
+  const val = document.getElementById('tokenInput').value.trim().replace(/[^\x20-\x7E]/g, '');
+  if (!val) return;
+  localStorage.setItem('jarvis_gh_token', val);
+  document.getElementById('tokenBanner').style.display = 'none';
+  showResult('✅ 토큰 저장 완료!', true);
+  loadFuelData();
+}
+function checkToken() {
+  if (getToken()) { document.getElementById('tokenBanner').style.display = 'none'; return true; }
+  document.getElementById('tokenBanner').style.display = 'block';
+  return false;
+}
+function ghHeaders() {
+  return { 'Authorization': `token ${getToken().replace(/[^\x20-\x7E]/g, '')}`, 'Accept': 'application/vnd.github+json' };
+}
+
+// ── dispatch ──────────────────────────────────────────────
+async function dispatch(inputs) {
+  if (!checkToken()) return;
+  showResult('⏳ 전송 중...', true);
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: {
+        'Authorization': `token ${getToken().replace(/[^\x20-\x7E]/g, '')}`,
+        'Accept': 'application/vnd.github+json',
+      },
+      body: JSON.stringify({ ref: REF, inputs }),
+    });
+    if (res.status === 204 || res.ok) {
+      showResult('✅ 기록 완료! 텔레그램 알림이 올 거예요.', true);
+    } else {
+      const b = await res.json().catch(() => ({}));
+      showResult(`❌ 오류 ${res.status}: ${b.message || '알 수 없는 오류'}`, false);
+    }
+  } catch (e) {
+    showResult(`❌ 네트워크 오류: ${e.message}`, false);
+  }
+}
+
+// ── fuel.json 로드 ────────────────────────────────────────
+let _fuelData = { vehicles: {} };
+
+async function loadFuelData() {
+  if (!checkToken()) return;
+  const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/fuel.json?ref=${REF}`;
+  try {
+    const res = await fetch(url, { headers: ghHeaders() });
+    if (res.status === 404) {
+      _fuelData = { vehicles: {} };
+      renderVehicleSelect();
+      return;
+    }
+    if (!res.ok) {
+      document.getElementById('historyBody').innerHTML = `<p style="color:var(--err-text);font-size:13px;">오류 ${res.status}</p>`;
+      return;
+    }
+    const data = await res.json();
+    const text = decodeURIComponent(escape(atob(data.content.replace(/\n/g, ''))));
+    _fuelData = JSON.parse(text);
+    if (!_fuelData.vehicles) _fuelData.vehicles = {};
+    renderVehicleSelect();
+  } catch (e) {
+    document.getElementById('historyBody').innerHTML = `<p style="color:var(--err-text);font-size:13px;">오류: ${e.message}</p>`;
+  }
+}
+
+// ── 차량 선택 UI ──────────────────────────────────────────
+function renderVehicleSelect() {
+  const names = Object.keys(_fuelData.vehicles);
+  const sel = document.getElementById('vehicleSelect');
+  const prev = sel.value;
+  sel.innerHTML = names.map(n => `<option value="${n}">${n}</option>`).join('') +
+    '<option value="__new__">+ 새 차량 추가</option>';
+  sel.value = names.includes(prev) ? prev : (names.length ? names[0] : '__new__');
+  onVehicleChange();
+}
+
+function onVehicleChange() {
+  const sel = document.getElementById('vehicleSelect');
+  const newWrap = document.getElementById('newVehicleWrap');
+  if (sel.value === '__new__') {
+    newWrap.style.display = 'block';
+    renderHistory(null);
+  } else {
+    newWrap.style.display = 'none';
+    renderHistory(sel.value);
+  }
+}
+
+function currentVehicleName() {
+  const sel = document.getElementById('vehicleSelect');
+  if (sel.value === '__new__') return document.getElementById('newVehicleInput').value.trim();
+  return sel.value;
+}
+
+// ── 연비 이력 렌더 ────────────────────────────────────────
+function renderHistory(name) {
+  const box = document.getElementById('historyBody');
+  const stat = document.getElementById('historyStats');
+  const records = name && _fuelData.vehicles[name] ? _fuelData.vehicles[name].records : [];
+  if (!records.length) {
+    box.innerHTML = '<p style="color:var(--text2);font-size:13px;padding:8px 0;">기록 없음</p>';
+    stat.innerHTML = '';
+    return;
+  }
+  const sorted = records.slice().reverse();
+  const withEff = records.filter(r => r.efficiency != null);
+  const avgEff = withEff.length ? (withEff.reduce((s, r) => s + r.efficiency, 0) / withEff.length).toFixed(1) : '-';
+  const totalCost = records.reduce((s, r) => s + (parseFloat(r.cost) || 0), 0);
+  stat.innerHTML = `
+    <div class="stat-box"><div class="stat-num">${avgEff}</div><div class="stat-label">평균 연비(km/L)</div></div>
+    <div class="stat-box"><div class="stat-num">${totalCost.toLocaleString()}</div><div class="stat-label">총 주유비용(원)</div></div>
+    <div class="stat-box"><div class="stat-num">${records.length}</div><div class="stat-label">총 주유횟수</div></div>`;
+  box.innerHTML = sorted.map(r => `
+    <div class="hist-row">
+      <span>${r.date}</span>
+      <span>${r.liters}L</span>
+      <span>${(parseFloat(r.cost) || 0).toLocaleString()}원</span>
+      <span>${r.odometer}km</span>
+      <span class="hist-eff">${r.efficiency != null ? r.efficiency.toFixed(1) + 'km/L' : '-'}</span>
+    </div>`).join('');
+}
+
+// ── 주유 기록 제출 ────────────────────────────────────────
+async function submitFuel() {
+  const vehicle = currentVehicleName();
+  if (!vehicle) { showResult('⚠️ 차량을 선택하거나 입력하세요.', false); return; }
+  const liters = document.getElementById('litersInput').value;
+  const cost = document.getElementById('costInput').value;
+  const odometer = document.getElementById('odometerInput').value;
+  if (!liters || !odometer) { showResult('⚠️ 리터와 키로수를 입력하세요.', false); return; }
+  await dispatch({ vehicle, liters, cost, odometer });
+  document.getElementById('litersInput').value = '';
+  document.getElementById('costInput').value = '';
+  document.getElementById('odometerInput').value = '';
+  loadFuelData();
+}
+
+// ── 공통 ──────────────────────────────────────────────────
+let _resultTimer = null;
+function showResult(msg, ok) {
+  const el = document.getElementById('result');
+  el.textContent = msg;
+  el.className = ok ? 'ok' : 'err';
+  el.style.display = 'block';
+  clearTimeout(_resultTimer);
+  _resultTimer = setTimeout(() => { el.style.display = 'none'; }, 3500);
+}
+
+// ── 초기화 ────────────────────────────────────────────────
+document.body.dataset.theme = localStorage.getItem('jarvis_theme_v2') || 'concierge';
+if (getToken()) loadFuelData(); else checkToken();
+</script>
+</body>
+</html>

@@ -33,6 +33,18 @@ on:
       organize:
         description: '오늘 일지 자동 정리 (true)'
         required: false
+      vehicle:
+        description: '차량 이름'
+        required: false
+      liters:
+        description: '주유량 (리터)'
+        required: false
+      cost:
+        description: '주유 금액 (원)'
+        required: false
+      odometer:
+        description: '누적 키로수'
+        required: false
 
 permissions:
   contents: write
@@ -57,13 +69,17 @@ jobs:
           SECTION: ${{ github.event.inputs.section }}
           CATEGORY: ${{ github.event.inputs.category }}
           ORGANIZE: ${{ github.event.inputs.organize }}
+          VEHICLE: ${{ github.event.inputs.vehicle }}
+          LITERS: ${{ github.event.inputs.liters }}
+          COST: ${{ github.event.inputs.cost }}
+          ODOMETER: ${{ github.event.inputs.odometer }}
         run: python3 scripts/log_location.py
 
       - name: Git 커밋 & 푸시
         run: |
           git config user.name "Jarvis"
           git config user.email "jarvis@auto.bot"
-          git add diary/ locations.json places.json
+          git add diary/ locations.json places.json fuel.json
           git diff --cached --quiet || git commit -m "자동기록: ${{ github.event.inputs.note || github.event.inputs.place || github.event.inputs.location }} ${{ github.event.inputs.event }}"
           git push origin HEAD:data
 

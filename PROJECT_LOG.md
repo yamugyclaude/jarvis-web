@@ -195,3 +195,25 @@
 ### 배포 이력
 - 버전: v2026.07.09.1 → v2026.07.09.2
 - 배포 일시: 2026-07-09
+
+## 2026-07-11 차량 관리 / 연비 페이지 신규 추가
+
+### 작업 내용
+- 사장님 요청: 주유(리터/금액/키로수) 기록으로 연비를 계산해주는 신규 페이지. 여러 차량 지원, 연비는 "이번 주유량으로 직전 주유 이후 주행거리를 나눔" 방식으로 계산.
+- `data` 브랜치 `scripts/log_location.py`에 `elif vehicle and liters and odometer:` 분기 추가 — `fuel.json`에 차량별 기록 append, 직전 기록 odometer와 비교해 `km_driven`/`efficiency` 계산(첫 기록이거나 주행거리가 0 이하면 `null`로 안전 처리).
+- `data`+`main` 양쪽 브랜치의 `.github/workflows/location-log.yml`에 `vehicle`/`liters`/`cost`/`odometer` 4개 입력을 `inputs:`와 위치 기록 스텝 `env:`에 전부 선언(과거 두 번 422 장애 원인 재발 방지), `git add`에 `fuel.json` 추가.
+- 신규 `vehicle.html`(main): index.html의 dispatch 인프라 + attendance.html의 GitHub Contents API 읽기 패턴을 조합. 차량 선택(+새 차량 추가 토글), 주유 기록 입력, 연비 이력(평균 연비·총 비용·총 횟수 통계 포함) 3개 카드로 구성.
+- `index.html`에 "⛽ 차량 관리" 카드 추가(장소 기록 카드 다음), 버전 3곳 갱신.
+
+### 결과
+- 성공: `log_location.py` `python3 -m py_compile` 통과. 격리 테스트 3케이스 전부 기대대로 동작 — ①첫 기록: `km_driven`/`efficiency` 둘 다 `null` ②정상 2회차(78000→78480km, 30L): `efficiency=16.0` ③주행거리 역행(78480→78400km): `efficiency=null`, 크래시 없음.
+- `location-log.yml`(data/main 양쪽) YAML 문법 검사(`yaml.safe_load`) 통과.
+- `vehicle.html`, `index.html` 각각 `<script>` 추출 후 `node --check` 통과.
+- 실제 브라우저/토큰을 통한 라이브 fetch, 실제 GitHub Actions dispatch(422 여부) 검증은 builder 환경에서 불가 — 비서가 별도로 진행.
+
+### 배운 것 / 반복하면 안 되는 실수
+- `main` 브랜치에도 `location-log.yml` 사본이 존재(실제 dispatch는 `data` 브랜치 워크플로 정의를 참조하지만 main 사본도 존재) — 두 브랜치 모두에 입력 선언을 동기화해야 함을 재확인. main 사본은 이전부터 TG_TOKEN 정제 로직 등 일부 항목이 `data`보다 오래된 상태였는데, 이번 작업 범위(차량 입력 4개 동기화)를 벗어나므로 임의로 손대지 않음.
+
+### 배포 이력
+- 버전: v2026.07.09.2 → v2026.07.11.1
+- 배포 일시: 2026-07-11
