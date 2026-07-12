@@ -223,55 +223,89 @@ elif place:
 
 # ── 고정 위치 기록 (LOCATION이 있을 때) ──────────────────────
 elif location:
-    new_lines = []
-    fm_count = 0
-
-    for line in lines:
-        stripped = line.strip()
-
-        if stripped == "---":
-            fm_count += 1
-            new_lines.append(line)
-            continue
-
-        if fm_count == 1:
-            if event == "arrive":
-                if line.startswith("location:"):
-                    line = f"location: {location}\n"
-                elif line.startswith("time_in:") and location != "home":
-                    # 출근시각 = 그날 사무실 "최초" 도착시각으로 고정.
-                    # 이미 값이 있으면(하루 중 재도착) 덮어쓰지 않는다.
-                    existing = line.split(":", 1)[1].strip()
-                    if not existing or existing == '""':
-                        line = f"time_in: {current_time}\n"
-                elif line.startswith("time_home:") and location == "home":
-                    line = f"time_home: {current_time}\n"
-            elif event in ("depart", "commute_out"):
-                if line.startswith("time_out:") and location != "home":
-                    # 퇴근시각 = 그날 사무실 "마지막" 이탈시각.
-                    # 이탈할 때마다 갱신하면, 하루 중 마지막 이탈 값이 자연히 남는다
-                    # (점심외출 후 재도착하면 time_in은 안 바뀌고, 다음 이탈 시 time_out만 다시 갱신됨).
-                    line = f"time_out: {current_time}\n"
-
-        new_lines.append(line)
-
     loc_name = location_names.get(location, location)
     event_labels = {"arrive": "도착", "depart": "떠남", "commute_in": "출근", "commute_out": "퇴근"}
     event_label = event_labels.get(event, event)
-    if event in ("commute_in", "commute_out"):
-        log_line = f"\n> 📍 {current_time} — {event_label}\n"
-    else:
-        log_line = f"\n> 📍 {current_time} — {loc_name} {event_label}\n"
-    new_lines.append(log_line)
 
-    with open(diary_path, "w", encoding="utf-8") as f:
-        f.writelines(new_lines)
+    handled_prev_day = False
+    prev_date = None
+    if event in ("depart", "commute_out") and location != "home":
+        prev_date = (now - timedelta(days=1)).strftime("%Y-%m-%d")
+        prev_path = f"diary/{prev_date[:4]}/{prev_date[5:7]}/{prev_date}.md"
+        if os.path.exists(prev_path):
+            with open(prev_path, "r", encoding="utf-8") as f:
+                prev_lines = f.readlines()
+            prev_fm_count = 0
+            prev_time_in = ""
+            prev_time_out = ""
+            for line in prev_lines:
+                stripped = line.strip()
+                if stripped == "---":
+                    prev_fm_count += 1
+                    continue
+                if prev_fm_count == 1:
+                    if line.startswith("time_in:"):
+                        prev_time_in = line.split(":", 1)[1].strip().strip('"')
+                    elif line.startswith("time_out:"):
+                        prev_time_out = line.split(":", 1)[1].strip().strip('"')
+            if prev_time_in and not prev_time_out:
+                # 전날 근무가 아직 안 닫혀있음 → 오늘이 아니라 전날 파일에 퇴근 기록
+                new_prev_lines = []
+                fm_count2 = 0
+                for line in prev_lines:
+                    stripped = line.strip()
+                    if stripped == "---":
+                        fm_count2 += 1
+                        new_prev_lines.append(line)
+                        continue
+                    if fm_count2 == 1 and line.startswith("time_out:"):
+                        line = f"time_out: {current_time}\n"
+                    new_prev_lines.append(line)
+                new_prev_lines.append(f"\n> 📍 {current_time} — {loc_name} {event_label} (자정 넘겨 전날 근무 마감)\n")
+                with open(prev_path, "w", encoding="utf-8") as f:
+                    f.writelines(new_prev_lines)
+                handled_prev_day = True
 
-    if event in ("commute_in", "commute_out"):
+    if not handled_prev_day:
+        new_lines = []
+        fm_count = 0
+        for line in lines:
+            stripped = line.strip()
+            if stripped == "---":
+                fm_count += 1
+                new_lines.append(line)
+                continue
+            if fm_count == 1:
+                if event == "arrive":
+                    if line.startswith("location:"):
+                        line = f"location: {location}\n"
+                    elif line.startswith("time_in:") and location != "home":
+                        existing = line.split(":", 1)[1].strip()
+                        if not existing or existing == '""':
+                            line = f"time_in: {current_time}\n"
+                    elif line.startswith("time_home:") and location == "home":
+                        line = f"time_home: {current_time}\n"
+                elif event in ("depart", "commute_out"):
+                    if line.startswith("time_out:") and location != "home":
+                        line = f"time_out: {current_time}\n"
+            new_lines.append(line)
+
+        if event in ("commute_in", "commute_out"):
+            log_line = f"\n> 📍 {current_time} — {event_label}\n"
+        else:
+            log_line = f"\n> 📍 {current_time} — {loc_name} {event_label}\n"
+        new_lines.append(log_line)
+
+        with open(diary_path, "w", encoding="utf-8") as f:
+            f.writelines(new_lines)
+
+    if handled_prev_day:
+        summary = f"✅ {loc_name} {event_label} 기록됨 — 전날({prev_date}) 근무 마감 처리 ({current_time})"
+    elif event in ("commute_in", "commute_out"):
         summary = f"✅ {event_label} 기록됨 ({current_time})"
     else:
         summary = f"✅ {loc_name} {event_label} 기록됨 ({current_time})"
-    print(f"✅ 기록 완료: {today} | {event_label} {current_time}")
+    print(f"✅ 기록 완료: {today} | {event_label} {current_time}" + (f" (전날 {prev_date} 근무 마감)" if handled_prev_day else ""))
 
 # ── 오늘 일지 자동 정리 (ORGANIZE=true일 때) ──────────────────
 elif organize == "true":
