@@ -150,7 +150,8 @@ function buildDayInfo(fm) {
   if (!inProgress) {
     const [ih, im] = fm.time_in.split(':').map(Number);
     const [oh, om] = fm.time_out.split(':').map(Number);
-    const mins = (oh * 60 + om) - (ih * 60 + im);
+    let mins = (oh * 60 + om) - (ih * 60 + im);
+    if (mins <= 0) mins += 24 * 60; // 자정 넘긴 퇴근(백엔드가 전날 파일에 기록) 보정
     hours = mins > 0 ? mins / 60 : null;
   }
   return { worked: true, time_in: fm.time_in, time_out: fm.time_out || '', inProgress, hours };
