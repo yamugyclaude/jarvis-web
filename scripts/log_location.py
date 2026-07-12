@@ -280,6 +280,8 @@ elif location:
                     if line.startswith("location:"):
                         line = f"location: {location}\n"
                     elif line.startswith("time_in:") and location != "home":
+                        # 출근시각 = 그날 사무실 "최초" 도착시각으로 고정.
+                        # 이미 값이 있으면(하루 중 재도착) 덮어쓰지 않는다.
                         existing = line.split(":", 1)[1].strip()
                         if not existing or existing == '""':
                             line = f"time_in: {current_time}\n"
@@ -287,6 +289,11 @@ elif location:
                         line = f"time_home: {current_time}\n"
                 elif event in ("depart", "commute_out"):
                     if line.startswith("time_out:") and location != "home":
+                        # 퇴근시각 = 그날 사무실 "마지막" 이탈시각.
+                        # 이탈할 때마다 갱신하면, 하루 중 마지막 이탈 값이 자연히 남는다
+                        # (점심외출 후 재도착하면 time_in은 안 바뀌고, 다음 이탈 시 time_out만 다시 갱신됨).
+                        # 단, 전날 근무가 자정을 넘겨 아직 안 닫힌 경우는 위쪽 handled_prev_day 분기에서
+                        # 먼저 처리되므로 여기까지 오지 않는다.
                         line = f"time_out: {current_time}\n"
             new_lines.append(line)
 
