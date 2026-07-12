@@ -229,7 +229,12 @@ elif location:
 
     handled_prev_day = False
     prev_date = None
-    if event in ("depart", "commute_out") and location != "home":
+    is_depart = event in ("depart", "commute_out")
+    # 자정~새벽 2시 사이에 발생한 비-home 퇴근/출근 이벤트는, 전날 근무가 아직 안 닫혀있으면
+    # 전날 근무의 연장으로 취급한다 (2시 이후는 컷오프 — 새 날짜로 정상 기록, 필요시 수동 정정).
+    is_redirect_candidate = location != "home" and current_time < "02:00" and (is_depart or event == "arrive")
+
+    if is_redirect_candidate:
         prev_date = (now - timedelta(days=1)).strftime("%Y-%m-%d")
         prev_path = f"diary/{prev_date[:4]}/{prev_date[5:7]}/{prev_date}.md"
         if os.path.exists(prev_path):
@@ -249,7 +254,7 @@ elif location:
                     elif line.startswith("time_out:"):
                         prev_time_out = line.split(":", 1)[1].strip().strip('"')
             if prev_time_in and not prev_time_out:
-                # 전날 근무가 아직 안 닫혀있음 → 오늘이 아니라 전날 파일에 퇴근 기록
+                # 전날 근무가 아직 안 닫혀있음 → 오늘이 아니라 전날 파일에 기록
                 new_prev_lines = []
                 fm_count2 = 0
                 for line in prev_lines:
@@ -258,10 +263,13 @@ elif location:
                         fm_count2 += 1
                         new_prev_lines.append(line)
                         continue
-                    if fm_count2 == 1 and line.startswith("time_out:"):
-                        line = f"time_out: {current_time}\n"
+                    if fm_count2 == 1:
+                        if is_depart and line.startswith("time_out:"):
+                            line = f"time_out: {current_time}\n"
+                        elif event == "arrive" and line.startswith("location:"):
+                            line = f"location: {location}\n"
                     new_prev_lines.append(line)
-                new_prev_lines.append(f"\n> 📍 {current_time} — {loc_name} {event_label} (자정 넘겨 전날 근무 마감)\n")
+                new_prev_lines.append(f"\n> 📍 {current_time} — {loc_name} {event_label} (자정 넘겨 전날 근무로 처리)\n")
                 with open(prev_path, "w", encoding="utf-8") as f:
                     f.writelines(new_prev_lines)
                 handled_prev_day = True
