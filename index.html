@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>자비스 기록 v2026.07.12.1</title>
+  <title>자비스 기록 v2026.07.13.1</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
@@ -122,7 +122,7 @@
 
   <!-- 헤더 -->
   <div class="header">
-    <div class="brand"><span>🤖</span><span>자비스 기록</span><span class="ver">v2026.07.12.1</span></div>
+    <div class="brand"><span>🤖</span><span>자비스 기록</span><span class="ver">v2026.07.13.1</span></div>
     <div style="display:flex;align-items:center;gap:8px;">
       <div class="moodbar">
         <button class="mood" data-t="concierge" onclick="setTheme('concierge')">비서</button>
@@ -266,7 +266,7 @@
 
   <div id="result"></div>
 
-  <div class="footer">v2026.07.12.1 · 조회 / 메모 / 장소 · 무드 4종(비서·자비스·조용·애플)</div>
+  <div class="footer">v2026.07.13.1 · 조회 / 메모 / 장소 · 무드 4종(비서·자비스·조용·애플)</div>
 </div>
 
 <!-- 메모 섹션 확인 팝업 -->
@@ -872,6 +872,8 @@ function startMetaEdit(field, type, currentVal) {
       ${inputHtml}
       <button onclick="saveMetaField('${field}','${type}')"
         style="padding:4px 10px;background:var(--btn-bg);color:var(--btn-text);border:none;border-radius:var(--input-radius);font-size:12px;cursor:pointer;font-family:var(--font);">저장</button>
+      <button onclick="clearMetaField('${field}')"
+        style="padding:4px 8px;background:var(--card);color:var(--err-text);border:1.5px solid var(--err-text);border-radius:var(--input-radius);font-size:12px;cursor:pointer;font-family:var(--font);">지우기</button>
       <button onclick="cancelMetaEdit()"
         style="padding:4px 8px;background:var(--card);color:var(--text);border:1.5px solid var(--border);border-radius:var(--input-radius);font-size:12px;cursor:pointer;font-family:var(--font);">취소</button>
     </div>`;
@@ -894,6 +896,16 @@ async function saveMetaField(field, type) {
     // 필드가 없으면 frontmatter 닫기 --- 앞에 추가
     return latestRaw.replace(/^(---\n[\s\S]*?)(---)/m, `$1${field}: ${newVal}\n$2`);
   }, '[jarvis] edit meta via web', '⏳ 저장 중...');
+}
+
+async function clearMetaField(field) {
+  await commitDiaryChange(latestRaw => {
+    const oldFmLine = latestRaw.match(new RegExp(`^${field}:.*$`, 'm'));
+    if (oldFmLine) {
+      return latestRaw.replace(new RegExp(`^${field}:.*$`, 'm'), `${field}: ""`);
+    }
+    return latestRaw.replace(/^(---\n[\s\S]*?)(---)/m, `$1${field}: ""\n$2`);
+  }, '[jarvis] clear meta via web', '⏳ 지우는 중...');
 }
 
 const DIARY_SECTIONS = ['오늘 한 일', '잘 된 것', '아쉬운 것 / 배운 것', '내일 할 것'];
