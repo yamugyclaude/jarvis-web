@@ -1,3 +1,18 @@
 {
-  "vehicles": {}
+  "vehicles": {
+    "E300": {
+      "records": [
+        {
+          "date": "2026-07-14",
+          "time": "08:26",
+          "liters": 37.33,
+          "cost": "70000",
+          "odometer": 72057.0,
+          "km_driven": null,
+          "efficiency": null,
+          "created_at": "2026-07-14 08:26"
+        }
+      ]
+    }
+  }
 }
