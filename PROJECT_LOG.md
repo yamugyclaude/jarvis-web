@@ -272,3 +272,24 @@
 ### 배포 이력
 - 버전: v2026.07.13.1 → v2026.07.14.1
 - 배포 일시: 2026-07-14
+
+## 2026-07-14 지도 팝업에 장소 리스트 + 바로가기/기록 버튼 추가
+
+### 작업 내용
+- 사장님 요청: 지도 팝업 안에 저장된 장소 이름 리스트를 두고, 이름 클릭 시 지도가 해당 위치로 이동(마커 팝업 오픈), "기록" 버튼 클릭 시 그 장소 방문을 오늘 일지에 바로 기록.
+- `#placeMap` 높이를 `60vh` → `42vh`로 줄이고 그 아래 스크롤 가능한 `#placeList` 컨테이너 신설.
+- `renderPlaceMarkers()`가 마커 생성 시 전역 `_placeMarkers[name]`에 저장하도록 수정(재실행 시 `_placeMarkers = {}`로 초기화 후 다시 채움), 함수 끝에서 `renderPlaceList()` 호출.
+- `renderPlaceList()` 신규: `_placeDB`를 순회해 각 장소를 DOM 요소로 직접 생성(이름 텍스트는 `textContent`, 클릭 핸들러는 클로저로 연결) — onclick 문자열에 이름을 넣지 않아 이름에 따옴표가 들어가도 안전. 좌표 없는 장소는 흐리게 표시하고 이름 클릭 시 이동 스킵(단, "기록" 버튼은 좌표 유무와 무관하게 항상 동작).
+- `flyToPlace(name)` 신규: `_leafletMap.flyTo`로 해당 좌표 이동 + `_placeMarkers[name].openPopup()`.
+- `recordPlaceVisit(name)` 신규: 기존 `sendPlace()`와 동일한 `{place, lat, lng}` 형태로 `dispatch()` 호출(이미 워크플로에 선언된 입력이라 422 위험 없음).
+
+### 결과
+- 성공: 앱 `<script>` 블록 `node --check` 통과. `placeList` id 중복 없음, `renderPlaceMarkers`/`renderPlaceList`/`flyToPlace`/`recordPlaceVisit` 함수 정의 각 1회. `_placeMarkers` 재실행 시 초기화 확인.
+- `index.html` 버전 3곳(title/brand/footer) 갱신.
+
+### 배운 것 / 반복하면 안 되는 실수
+- 없음. 사용자 데이터(장소 이름)를 HTML 문자열에 끼워 넣는 대신 `textContent` + 클로저 이벤트 핸들러로 처리해 이스케이프 문제를 원천 차단.
+
+### 배포 이력
+- 버전: v2026.07.14.1 → v2026.07.14.2
+- 배포 일시: 2026-07-14
