@@ -342,3 +342,25 @@
 ### 배포 이력
 - 버전: v2026.07.14.4 → v2026.07.14.5
 - 배포 일시: 2026-07-14
+
+## 2026-07-14 지도 엔진을 카카오맵으로 교체 + 장소 검색 기능 추가
+
+### 작업 내용
+- 사장님 요청: 지도 팝업 엔진을 Leaflet+OpenStreetMap에서 카카오맵으로 교체(한국 지명·상호 검색이 목적). 좌표 저장 포맷(`_placeDB`의 `{lat,lng}`)과 `_pendingCoord`→`confirmCategory()` 연동 흐름은 지도 엔진과 무관하므로 그대로 두고, Leaflet API 호출만 카카오 API로 1:1 치환.
+- `<head>` Leaflet CSS 제거, `</body>` 앞 Leaflet JS를 카카오 지도 SDK(`libraries=services`, `autoload=false`)로 교체. `_leafletMap` → `_kakaoMap`, `L.marker`/`L.tileLayer`/`fitBounds` → `kakao.maps.Marker`/`kakao.maps.Map`/`LatLngBounds`, `bindPopup` → `kakao.maps.InfoWindow`(`openPlaceInfo` 헬퍼로 재사용, 장소명은 `textContent`로 넣어 XSS 안전).
+- `openMapPopup()`에 SDK 미로드 가드 추가 — `kakao` 전역이 없으면(키 미설정 상태) 토스트 안내만 뜨고 앱이 깨지지 않음.
+- 신규: 지도 팝업에 장소·주소 검색창(`#mapSearchInput`) 추가. `searchPlaces()`가 `kakao.maps.services.Places().keywordSearch()`로 검색 → `renderSearchResults()`가 결과 리스트 렌더 → 결과 클릭 시 `pickSearchResult(name, lat, lng)`가 지도 이동+임시마커+`_pendingCoord` 설정+이름 자동 입력까지 하고 기존 `#mapPickBar`→"다음"→`confirmMapPick()`→카테고리 팝업 흐름에 그대로 얹음(신규 등록 경로 재사용, 별도 dispatch 로직 없음).
+- `resetMapPick()`에 검색 결과 리스트 초기화(비우기+숨김) 한 줄 추가 — 픽 취소/모달 닫기 시 이전 검색 결과가 남아 혼란 주지 않도록.
+- **선행 조건(사장님 액션 필요)**: 카카오 개발자(developers.kakao.com)에서 앱 생성 → JavaScript 키 발급 → 플랫폼에 `https://yamugyclaude.github.io` 도메인 등록 → 카카오맵 사용 ON. 이 3가지가 끝나야 지도가 실제로 뜬다. **현재 `index.html`의 appkey는 `YOUR_KAKAO_JS_KEY` 플레이스홀더 상태 — 키를 실제 값으로 교체하기 전까지는 지도 팝업만 비활성(안내 토스트만 뜸)이고 나머지 앱 기능(일지/장소기록/차량/출퇴근표)은 정상 작동.**
+
+### 결과
+- 성공: 앱 `<script>` 블록 `node --check` 통과. `grep -i "leaflet\|L\.map\|L\.marker\|L\.tileLayer\|_leafletMap\|instanceof L\." index.html` 0건으로 Leaflet 잔재 완전 제거 확인. 신규 함수(`searchPlaces`/`renderSearchResults`/`pickSearchResult`/`openPlaceInfo`) 각 1회 정의, 신규 id(`mapSearchInput`/`mapSearchResults`) 중복 없음 확인. 좌표 순서 코드 리뷰: `kakao.maps.LatLng(위도, 경도)` 순 일관, 검색 결과 `y`=위도(lat)/`x`=경도(lng) parseFloat 처리 정확. 기존 `confirmCategory`/`_pendingCoord`/`closeCatPopup` 흐름은 손대지 않음(지도 엔진 교체와 무관).
+- `index.html` 버전 3곳(title/brand/footer) 갱신.
+- 실제 지도 렌더링/검색 동작은 카카오 키 발급·도메인 등록 후에만 확인 가능하므로 이 환경에서는 문법 검사+Leaflet 잔재 제거 확인+좌표 순서 코드 리뷰로 검증 대체.
+
+### 배운 것 / 반복하면 안 되는 실수
+- 외부 지도 SDK를 `autoload=false`로 붙일 때는 `kakao.maps.load(cb)` 콜백 안에서 초기화해야 하고, 키가 아직 플레이스홀더인 배포 단계에서도 앱이 깨지지 않도록 `typeof kakao === 'undefined'` 가드를 반드시 넣을 것.
+
+### 배포 이력
+- 버전: v2026.07.14.5 → v2026.07.14.6
+- 배포 일시: 2026-07-14

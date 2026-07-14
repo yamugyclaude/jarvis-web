@@ -3,12 +3,11 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>자비스 기록 v2026.07.14.5</title>
+  <title>자비스 기록 v2026.07.14.6</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <style>
     @keyframes blink { 50% { opacity: 0.25; } }
     @keyframes sweep { 0% { transform: translateY(-100%); } 100% { transform: translateY(1400%); } }
@@ -123,7 +122,7 @@
 
   <!-- 헤더 -->
   <div class="header">
-    <div class="brand"><span>🤖</span><span>자비스 기록</span><span class="ver">v2026.07.14.5</span></div>
+    <div class="brand"><span>🤖</span><span>자비스 기록</span><span class="ver">v2026.07.14.6</span></div>
     <div style="display:flex;align-items:center;gap:8px;">
       <div class="moodbar">
         <button class="mood" data-t="concierge" onclick="setTheme('concierge')">비서</button>
@@ -268,7 +267,7 @@
 
   <div id="result"></div>
 
-  <div class="footer">v2026.07.14.5 · 조회 / 메모 / 장소 · 무드 4종(비서·자비스·조용·애플)</div>
+  <div class="footer">v2026.07.14.6 · 조회 / 메모 / 장소 · 무드 4종(비서·자비스·조용·애플)</div>
 </div>
 
 <!-- 메모 섹션 확인 팝업 -->
@@ -325,6 +324,11 @@
       <span>🗺 저장된 장소</span>
       <button onclick="closeMapPopup()" style="border:none;background:transparent;font-size:18px;cursor:pointer;color:var(--text2);line-height:1;">✕</button>
     </div>
+    <div style="display:flex;gap:6px;margin-top:10px;">
+      <input type="text" id="mapSearchInput" placeholder="장소·주소 검색 (예: 통영 신혜식당)" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--input-radius);font-size:13px;background:var(--card);color:var(--text);font-family:var(--font);" onkeydown="if(event.key==='Enter') searchPlaces()">
+      <button class="view-btn" style="flex:0 0 auto;padding:8px 14px;" onclick="searchPlaces()">검색</button>
+    </div>
+    <div id="mapSearchResults" style="display:none;margin-top:8px;max-height:20vh;overflow-y:auto;flex-direction:column;gap:6px;"></div>
     <div id="placeMap" style="height:42vh;border-radius:var(--input-radius);overflow:hidden;margin-top:10px;"></div>
     <div id="placeList" style="margin-top:10px;max-height:22vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
     <button class="view-btn" id="mapPickBtn" style="width:100%;margin-top:8px;" onclick="startMapPick()">📍 지도 찍어 새 장소 추가</button>
@@ -339,7 +343,7 @@
   </div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=YOUR_KAKAO_JS_KEY&libraries=services&autoload=false"></script>
 <script>
 const REPO_OWNER = 'yamugyclaude';
 const REPO_NAME  = 'jarvis-web';
@@ -466,26 +470,34 @@ async function loadPlacesFromGitHub() {
   } catch(e) { /* 오프라인이면 localStorage 캐시 유지 */ }
 }
 
-// ── 지도 팝업 (Leaflet + OpenStreetMap) ──────────────────────
-let _leafletMap = null;
+// ── 지도 팝업 (카카오맵) ──────────────────────
+let _kakaoMap = null;
 let _placeMarkers = {};
 let _pendingCoord = null;   // 지도 탭 등으로 미리 지정된 좌표 {lat, lng}
 let _mapPickMode = false;   // 지도 탭 대기 중인지
 let _pickMarker = null;     // 탭한 지점 임시 마커
+let _placeInfoWindow = null;
 
 function openMapPopup() {
   document.getElementById('mapOverlay').classList.add('show');
   setTimeout(() => {
-    if (!_leafletMap) {
-      _leafletMap = L.map('placeMap');
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        maxZoom: 19,
-        attribution: '&copy; OpenStreetMap'
-      }).addTo(_leafletMap);
-      _leafletMap.on('click', onMapClick);
+    if (typeof kakao === 'undefined' || !kakao.maps || !kakao.maps.load) {
+      showResult('⚠️ 지도를 불러올 수 없습니다 (카카오 지도 키 설정 필요)', false);
+      return;
     }
-    renderPlaceMarkers();
-  }, 50);
+    kakao.maps.load(() => {
+      if (!_kakaoMap) {
+        _kakaoMap = new kakao.maps.Map(document.getElementById('placeMap'), {
+          center: new kakao.maps.LatLng(34.85, 128.42),
+          level: 5
+        });
+        _placeInfoWindow = new kakao.maps.InfoWindow({ removable: true });
+        kakao.maps.event.addListener(_kakaoMap, 'click', onMapClick);
+      }
+      _kakaoMap.relayout();
+      renderPlaceMarkers();
+    });
+  }, 60);
 }
 
 function closeMapPopup() {
@@ -499,33 +511,41 @@ function closeMapPopup() {
 function resetMapPick() {
   _mapPickMode = false;
   _pendingCoord = null;
-  if (_pickMarker && _leafletMap) { _leafletMap.removeLayer(_pickMarker); _pickMarker = null; }
+  if (_pickMarker) { _pickMarker.setMap(null); _pickMarker = null; }
   const bar = document.getElementById('mapPickBar');
   const btn = document.getElementById('mapPickBtn');
   if (bar) bar.style.display = 'none';
   if (btn) btn.style.display = 'block';
+  const results = document.getElementById('mapSearchResults');
+  if (results) { results.style.display = 'none'; results.innerHTML = ''; }
 }
 
 function renderPlaceMarkers() {
-  if (!_leafletMap) return;
-  _leafletMap.eachLayer(layer => { if (layer instanceof L.Marker) _leafletMap.removeLayer(layer); });
+  if (!_kakaoMap) return;
+  Object.values(_placeMarkers).forEach(m => m.setMap(null));
   _placeMarkers = {};
-  const pts = [];
+  const bounds = new kakao.maps.LatLngBounds();
+  let count = 0;
   Object.entries(_placeDB).forEach(([name, p]) => {
     if (typeof p.lat === 'number' && typeof p.lng === 'number') {
-      const marker = L.marker([p.lat, p.lng]).addTo(_leafletMap);
-      marker.bindPopup(`<b>${name}</b>${p.cat ? ' · ' + p.cat : ''}`);
+      const pos = new kakao.maps.LatLng(p.lat, p.lng);
+      const marker = new kakao.maps.Marker({ position: pos, map: _kakaoMap });
+      kakao.maps.event.addListener(marker, 'click', () => openPlaceInfo(marker, name, p.cat));
       _placeMarkers[name] = marker;
-      pts.push([p.lat, p.lng]);
+      bounds.extend(pos);
+      count++;
     }
   });
-  if (pts.length) {
-    _leafletMap.fitBounds(pts, { padding: [30, 30], maxZoom: 16 });
-  } else {
-    _leafletMap.setView([36.5, 127.8], 7);
-  }
-  _leafletMap.invalidateSize();
+  if (count) _kakaoMap.setBounds(bounds);
   renderPlaceList();
+}
+
+function openPlaceInfo(marker, name, cat) {
+  const div = document.createElement('div');
+  div.style.cssText = 'padding:6px 10px;font-size:12px;';
+  div.textContent = name + (cat ? ' · ' + cat : '');
+  _placeInfoWindow.setContent(div);
+  _placeInfoWindow.open(_kakaoMap, marker);
 }
 
 function renderPlaceList() {
@@ -560,10 +580,12 @@ function renderPlaceList() {
 
 function flyToPlace(name) {
   const p = _placeDB[name];
-  if (!_leafletMap || !p || typeof p.lat !== 'number' || typeof p.lng !== 'number') return;
-  _leafletMap.flyTo([p.lat, p.lng], 16);
+  if (!_kakaoMap || !p || typeof p.lat !== 'number' || typeof p.lng !== 'number') return;
+  const pos = new kakao.maps.LatLng(p.lat, p.lng);
+  _kakaoMap.setLevel(3);
+  _kakaoMap.panTo(pos);
   const marker = _placeMarkers[name];
-  if (marker) marker.openPopup();
+  if (marker) openPlaceInfo(marker, name, p.cat);
 }
 
 function recordPlaceVisit(name) {
@@ -586,13 +608,13 @@ function startMapPick() {
   showResult('📍 지도를 탭해 위치를 선택하세요', true);
 }
 
-function onMapClick(e) {
+function onMapClick(mouseEvent) {
   if (!_mapPickMode) return;   // 픽 모드 아닐 땐 일반 지도 클릭 무시
-  const { lat, lng } = e.latlng;
+  const latlng = mouseEvent.latLng;
+  const lat = latlng.getLat(), lng = latlng.getLng();
   _pendingCoord = { lat, lng };
-  if (_pickMarker) { _leafletMap.removeLayer(_pickMarker); }
-  _pickMarker = L.marker([lat, lng]).addTo(_leafletMap);
-  _pickMarker.bindPopup('여기에 새 장소').openPopup();
+  if (_pickMarker) { _pickMarker.setMap(null); }
+  _pickMarker = new kakao.maps.Marker({ position: new kakao.maps.LatLng(lat, lng), map: _kakaoMap });
   document.getElementById('mapPickNameInput').focus();
 }
 
@@ -605,7 +627,7 @@ function confirmMapPick() {
   _mapPickMode = false;
   document.getElementById('mapPickBar').style.display = 'none';
   document.getElementById('mapPickBtn').style.display = 'block';
-  if (_pickMarker) { _leafletMap.removeLayer(_pickMarker); _pickMarker = null; }
+  if (_pickMarker) { _pickMarker.setMap(null); _pickMarker = null; }
   document.getElementById('mapOverlay').classList.remove('show');
   _pendingPlace = name;
   _selectedCat = '';
@@ -618,6 +640,61 @@ function confirmMapPick() {
 
 function cancelMapPick() {
   resetMapPick();
+}
+
+function searchPlaces() {
+  const q = document.getElementById('mapSearchInput').value.trim();
+  if (!q) { showResult('⚠️ 검색어를 입력하세요.', false); return; }
+  if (typeof kakao === 'undefined' || !kakao.maps || !kakao.maps.services) {
+    showResult('⚠️ 지도 검색을 사용할 수 없습니다 (지도 키 설정 필요)', false); return;
+  }
+  const ps = new kakao.maps.services.Places();
+  ps.keywordSearch(q, (data, status) => {
+    if (status === kakao.maps.services.Status.OK) {
+      renderSearchResults(data);
+    } else {
+      const box = document.getElementById('mapSearchResults');
+      box.style.display = 'flex';
+      box.innerHTML = '<span style="font-size:12px;color:var(--text2);padding:4px;">검색 결과 없음</span>';
+    }
+  });
+}
+
+function renderSearchResults(data) {
+  const box = document.getElementById('mapSearchResults');
+  box.innerHTML = '';
+  box.style.display = 'flex';
+  data.slice(0, 15).forEach(place => {
+    const lat = parseFloat(place.y);   // 카카오: y=위도(lat)
+    const lng = parseFloat(place.x);   // 카카오: x=경도(lng)
+    const row = document.createElement('div');
+    row.style.cssText = 'padding:6px 10px;border:1px solid var(--border);border-radius:var(--input-radius);background:var(--card);cursor:pointer;';
+    const t = document.createElement('div');
+    t.style.cssText = 'font-size:13px;color:var(--text);';
+    t.textContent = place.place_name;
+    const a = document.createElement('div');
+    a.style.cssText = 'font-size:11px;color:var(--text2);';
+    a.textContent = place.road_address_name || place.address_name || '';
+    row.appendChild(t); row.appendChild(a);
+    row.addEventListener('click', () => pickSearchResult(place.place_name, lat, lng));
+    box.appendChild(row);
+  });
+}
+
+function pickSearchResult(name, lat, lng) {
+  if (!_kakaoMap) return;
+  const pos = new kakao.maps.LatLng(lat, lng);
+  _kakaoMap.setLevel(3);
+  _kakaoMap.panTo(pos);
+  _pendingCoord = { lat, lng };
+  if (_pickMarker) { _pickMarker.setMap(null); }
+  _pickMarker = new kakao.maps.Marker({ position: pos, map: _kakaoMap });
+  _mapPickMode = false;
+  document.getElementById('mapPickBtn').style.display = 'none';
+  const bar = document.getElementById('mapPickBar');
+  bar.style.display = 'flex';
+  document.getElementById('mapPickNameInput').value = name;
+  document.getElementById('mapPickNameInput').focus();
 }
 
 document.getElementById('mapOverlay').addEventListener('click', e => {
