@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>자비스 기록 v2026.07.14.4</title>
+  <title>자비스 기록 v2026.07.14.5</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
@@ -123,7 +123,7 @@
 
   <!-- 헤더 -->
   <div class="header">
-    <div class="brand"><span>🤖</span><span>자비스 기록</span><span class="ver">v2026.07.14.4</span></div>
+    <div class="brand"><span>🤖</span><span>자비스 기록</span><span class="ver">v2026.07.14.5</span></div>
     <div style="display:flex;align-items:center;gap:8px;">
       <div class="moodbar">
         <button class="mood" data-t="concierge" onclick="setTheme('concierge')">비서</button>
@@ -268,7 +268,7 @@
 
   <div id="result"></div>
 
-  <div class="footer">v2026.07.14.4 · 조회 / 메모 / 장소 · 무드 4종(비서·자비스·조용·애플)</div>
+  <div class="footer">v2026.07.14.5 · 조회 / 메모 / 장소 · 무드 4종(비서·자비스·조용·애플)</div>
 </div>
 
 <!-- 메모 섹션 확인 팝업 -->
@@ -490,6 +490,20 @@ function openMapPopup() {
 
 function closeMapPopup() {
   document.getElementById('mapOverlay').classList.remove('show');
+  // ✕·바깥클릭으로 닫을 때 지도 찍기 상태를 완전히 리셋한다.
+  // (안 하면 남은 _pendingCoord가 다음 일반 장소 기록에 엉뚱한 좌표로 새어 들어감.
+  //  정상 진행인 confirmMapPick은 이 함수를 부르지 않고 _pendingCoord를 살린 채 넘어감.)
+  resetMapPick();
+}
+
+function resetMapPick() {
+  _mapPickMode = false;
+  _pendingCoord = null;
+  if (_pickMarker && _leafletMap) { _leafletMap.removeLayer(_pickMarker); _pickMarker = null; }
+  const bar = document.getElementById('mapPickBar');
+  const btn = document.getElementById('mapPickBtn');
+  if (bar) bar.style.display = 'none';
+  if (btn) btn.style.display = 'block';
 }
 
 function renderPlaceMarkers() {
@@ -586,12 +600,13 @@ function confirmMapPick() {
   const name = document.getElementById('mapPickNameInput').value.trim();
   if (!_pendingCoord) { showResult('⚠️ 먼저 지도를 탭해 위치를 선택하세요.', false); return; }
   if (!name) { showResult('⚠️ 장소 이름을 입력하세요.', false); return; }
-  // 카테고리 팝업으로 넘김 (_pendingCoord는 confirmCategory가 사용)
+  // 카테고리 팝업으로 넘김 — closeMapPopup()은 _pendingCoord를 리셋하므로 부르지 않고,
+  // 지도 오버레이만 직접 숨기고 좌표는 살려서 confirmCategory가 사용하게 한다.
   _mapPickMode = false;
   document.getElementById('mapPickBar').style.display = 'none';
   document.getElementById('mapPickBtn').style.display = 'block';
   if (_pickMarker) { _leafletMap.removeLayer(_pickMarker); _pickMarker = null; }
-  closeMapPopup();
+  document.getElementById('mapOverlay').classList.remove('show');
   _pendingPlace = name;
   _selectedCat = '';
   document.getElementById('catPlaceText').textContent = name;
@@ -602,11 +617,7 @@ function confirmMapPick() {
 }
 
 function cancelMapPick() {
-  _mapPickMode = false;
-  _pendingCoord = null;
-  if (_pickMarker) { _leafletMap.removeLayer(_pickMarker); _pickMarker = null; }
-  document.getElementById('mapPickBar').style.display = 'none';
-  document.getElementById('mapPickBtn').style.display = 'block';
+  resetMapPick();
 }
 
 document.getElementById('mapOverlay').addEventListener('click', e => {
