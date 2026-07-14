@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>자비스 기록 v2026.07.14.3</title>
+  <title>자비스 기록 v2026.07.14.4</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
@@ -123,7 +123,7 @@
 
   <!-- 헤더 -->
   <div class="header">
-    <div class="brand"><span>🤖</span><span>자비스 기록</span><span class="ver">v2026.07.14.3</span></div>
+    <div class="brand"><span>🤖</span><span>자비스 기록</span><span class="ver">v2026.07.14.4</span></div>
     <div style="display:flex;align-items:center;gap:8px;">
       <div class="moodbar">
         <button class="mood" data-t="concierge" onclick="setTheme('concierge')">비서</button>
@@ -268,7 +268,7 @@
 
   <div id="result"></div>
 
-  <div class="footer">v2026.07.14.3 · 조회 / 메모 / 장소 · 무드 4종(비서·자비스·조용·애플)</div>
+  <div class="footer">v2026.07.14.4 · 조회 / 메모 / 장소 · 무드 4종(비서·자비스·조용·애플)</div>
 </div>
 
 <!-- 메모 섹션 확인 팝업 -->
@@ -327,6 +327,15 @@
     </div>
     <div id="placeMap" style="height:42vh;border-radius:var(--input-radius);overflow:hidden;margin-top:10px;"></div>
     <div id="placeList" style="margin-top:10px;max-height:22vh;overflow-y:auto;display:flex;flex-direction:column;gap:6px;"></div>
+    <button class="view-btn" id="mapPickBtn" style="width:100%;margin-top:8px;" onclick="startMapPick()">📍 지도 찍어 새 장소 추가</button>
+    <div id="mapPickBar" style="display:none;margin-top:8px;gap:6px;flex-direction:column;">
+      <div style="font-size:12px;color:var(--text2);">📍 선택한 위치에 저장할 이름을 입력하세요</div>
+      <div style="display:flex;gap:6px;">
+        <input type="text" id="mapPickNameInput" placeholder="장소 이름" style="flex:1;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--input-radius);font-size:13px;background:var(--card);color:var(--text);font-family:var(--font);">
+        <button class="view-btn" style="flex:0 0 auto;padding:8px 14px;" onclick="confirmMapPick()">다음</button>
+        <button class="view-btn" style="flex:0 0 auto;padding:8px 14px;" onclick="cancelMapPick()">취소</button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -460,6 +469,9 @@ async function loadPlacesFromGitHub() {
 // ── 지도 팝업 (Leaflet + OpenStreetMap) ──────────────────────
 let _leafletMap = null;
 let _placeMarkers = {};
+let _pendingCoord = null;   // 지도 탭 등으로 미리 지정된 좌표 {lat, lng}
+let _mapPickMode = false;   // 지도 탭 대기 중인지
+let _pickMarker = null;     // 탭한 지점 임시 마커
 
 function openMapPopup() {
   document.getElementById('mapOverlay').classList.add('show');
@@ -470,6 +482,7 @@ function openMapPopup() {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap'
       }).addTo(_leafletMap);
+      _leafletMap.on('click', onMapClick);
     }
     renderPlaceMarkers();
   }, 50);
@@ -548,6 +561,52 @@ function recordPlaceVisit(name) {
     inputs.lng = String(p.lng);
   }
   dispatch(inputs);
+}
+
+function startMapPick() {
+  _mapPickMode = true;
+  document.getElementById('mapPickBtn').style.display = 'none';
+  const bar = document.getElementById('mapPickBar');
+  bar.style.display = 'flex';
+  document.getElementById('mapPickNameInput').value = '';
+  showResult('📍 지도를 탭해 위치를 선택하세요', true);
+}
+
+function onMapClick(e) {
+  if (!_mapPickMode) return;   // 픽 모드 아닐 땐 일반 지도 클릭 무시
+  const { lat, lng } = e.latlng;
+  _pendingCoord = { lat, lng };
+  if (_pickMarker) { _leafletMap.removeLayer(_pickMarker); }
+  _pickMarker = L.marker([lat, lng]).addTo(_leafletMap);
+  _pickMarker.bindPopup('여기에 새 장소').openPopup();
+  document.getElementById('mapPickNameInput').focus();
+}
+
+function confirmMapPick() {
+  const name = document.getElementById('mapPickNameInput').value.trim();
+  if (!_pendingCoord) { showResult('⚠️ 먼저 지도를 탭해 위치를 선택하세요.', false); return; }
+  if (!name) { showResult('⚠️ 장소 이름을 입력하세요.', false); return; }
+  // 카테고리 팝업으로 넘김 (_pendingCoord는 confirmCategory가 사용)
+  _mapPickMode = false;
+  document.getElementById('mapPickBar').style.display = 'none';
+  document.getElementById('mapPickBtn').style.display = 'block';
+  if (_pickMarker) { _leafletMap.removeLayer(_pickMarker); _pickMarker = null; }
+  closeMapPopup();
+  _pendingPlace = name;
+  _selectedCat = '';
+  document.getElementById('catPlaceText').textContent = name;
+  document.getElementById('selectedCatLabel').textContent = '없음';
+  document.getElementById('catInput').value = '';
+  renderCatChips();
+  document.getElementById('catOverlay').classList.add('show');
+}
+
+function cancelMapPick() {
+  _mapPickMode = false;
+  _pendingCoord = null;
+  if (_pickMarker) { _leafletMap.removeLayer(_pickMarker); _pickMarker = null; }
+  document.getElementById('mapPickBar').style.display = 'none';
+  document.getElementById('mapPickBtn').style.display = 'block';
 }
 
 document.getElementById('mapOverlay').addEventListener('click', e => {
@@ -651,6 +710,7 @@ function addNewCategory() {
 function closeCatPopup() {
   document.getElementById('catOverlay').classList.remove('show');
   _pendingPlace = '';
+  _pendingCoord = null;
 }
 
 async function confirmCategory() {
@@ -659,14 +719,19 @@ async function confirmCategory() {
   const place = _pendingPlace;
   document.getElementById('catOverlay').classList.remove('show');
   _pendingPlace = '';
-  const gps = await getGPS();
+  let coord = _pendingCoord;
+  _pendingCoord = null;
+  if (!coord) {
+    const gps = await getGPS();
+    coord = gps ? { lat: gps.lat, lng: gps.lng } : null;
+  }
   const db = getPlaceDB();
   // 낙관적 반영 (Actions가 places.json 갱신할 때까지 시간차 보완)
-  db[place] = { cat, lat: gps ? gps.lat : null, lng: gps ? gps.lng : null,
+  db[place] = { cat, lat: coord ? coord.lat : null, lng: coord ? coord.lng : null,
     created_at: new Date().toISOString() };
   savePlaceDB(db);
   const inputs = { place, category: cat };
-  if (gps) { inputs.lat = String(gps.lat); inputs.lng = String(gps.lng); }
+  if (coord) { inputs.lat = String(coord.lat); inputs.lng = String(coord.lng); }
   dispatch(inputs);
   document.getElementById('placeInput').value = '';
 }

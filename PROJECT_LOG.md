@@ -307,3 +307,24 @@
 ### 배포 이력
 - 버전: v2026.07.14.2 → v2026.07.14.3
 - 배포 일시: 2026-07-14
+
+## 2026-07-14 지도 탭으로 새 장소 등록 기능 추가
+
+### 작업 내용
+- 사장님 요청: 지도에서 원하는 지점을 탭해 그 좌표로 새 장소(이름+카테고리)를 바로 등록.
+- 기존 "장소 기록" 카드의 카테고리 팝업(`#catOverlay`) 흐름을 그대로 재사용: `confirmCategory()`가 GPS 대신 미리 지정된 좌표(`_pendingCoord`)가 있으면 그걸 쓰고, 없으면 기존과 동일하게 `getGPS()`를 쓰도록 최소 수정 — 정상 장소 기록 흐름은 100% 그대로 유지(회귀 없음).
+- 지도 팝업에 "📍 지도 찍어 새 장소 추가" 버튼과 이름 입력 바(`#mapPickBar`) 추가. 버튼 클릭 시 `startMapPick()`으로 픽 모드 진입 → 지도 탭 시 `onMapClick()`이 좌표를 `_pendingCoord`에 저장하고 임시 마커 표시 → 이름 입력 후 "다음"(`confirmMapPick()`)으로 기존 카테고리 팝업을 염(이후 흐름은 `confirmCategory()`가 처리).
+- `_leafletMap.on('click', onMapClick)`은 `openMapPopup()`의 `if (!_leafletMap)` 최초 초기화 블록 안에 등록해 지도를 여러 번 열어도 핸들러 중복 등록 안 됨. `onMapClick`은 픽 모드가 아니면 즉시 리턴해 평소 지도 클릭(마커 팝업 등)에 영향 없음.
+- `closeCatPopup()`에도 `_pendingCoord = null` 리셋 추가(취소 시 다음 일반 기록에 엉뚱한 좌표가 남는 것 방지).
+
+### 결과
+- 성공: 앱 `<script>` 블록 `node --check` 통과. 신규 id(`mapPickBtn`/`mapPickBar`/`mapPickNameInput`), 신규 함수(`startMapPick`/`onMapClick`/`confirmMapPick`/`cancelMapPick`) 각 1회 정의 확인. `confirmCategory()`의 `_pendingCoord` null 분기가 기존 GPS 흐름과 동일함을 코드로 확인. 지도 클릭 핸들러가 `if (!_leafletMap)` 블록 안에 있어 중복 등록 안 됨을 확인.
+- `index.html` 버전 3곳(title/brand/footer) 갱신.
+- 실제 브라우저에서의 지도 탭·마커·dispatch 동작은 이 환경에서 직접 확인 불가 — 문법 검사와 코드 리뷰로 대체.
+
+### 배운 것 / 반복하면 안 되는 실수
+- 없음. 기존 카테고리 팝업 흐름을 재사용해 새 UI 경로를 추가하되, 공용 함수(`confirmCategory`)의 기존 동작(좌표 없을 때 GPS 사용)을 깨지 않도록 "미리 지정된 값이 있으면 우선, 없으면 기존 로직" 패턴으로 안전하게 확장.
+
+### 배포 이력
+- 버전: v2026.07.14.3 → v2026.07.14.4
+- 배포 일시: 2026-07-14
