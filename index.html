@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>자비스 기록 v2026.07.13.1</title>
+  <title>자비스 기록 v2026.07.14.1</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
   <style>
     @keyframes blink { 50% { opacity: 0.25; } }
     @keyframes sweep { 0% { transform: translateY(-100%); } 100% { transform: translateY(1400%); } }
@@ -122,7 +123,7 @@
 
   <!-- 헤더 -->
   <div class="header">
-    <div class="brand"><span>🤖</span><span>자비스 기록</span><span class="ver">v2026.07.13.1</span></div>
+    <div class="brand"><span>🤖</span><span>자비스 기록</span><span class="ver">v2026.07.14.1</span></div>
     <div style="display:flex;align-items:center;gap:8px;">
       <div class="moodbar">
         <button class="mood" data-t="concierge" onclick="setTheme('concierge')">비서</button>
@@ -256,6 +257,7 @@
         z-index:50;max-height:180px;overflow-y:auto;margin-top:2px;"></div>
     </div>
     <button class="send-btn" onclick="sendPlace()">장소 기록</button>
+    <button class="view-btn" style="width:100%;margin-top:6px;" onclick="openMapPopup()">🗺 지도로 보기</button>
   </div>
 
   <!-- 차량 관리 -->
@@ -266,7 +268,7 @@
 
   <div id="result"></div>
 
-  <div class="footer">v2026.07.13.1 · 조회 / 메모 / 장소 · 무드 4종(비서·자비스·조용·애플)</div>
+  <div class="footer">v2026.07.14.1 · 조회 / 메모 / 장소 · 무드 4종(비서·자비스·조용·애플)</div>
 </div>
 
 <!-- 메모 섹션 확인 팝업 -->
@@ -316,6 +318,18 @@
   </div>
 </div>
 
+<!-- 지도 팝업 -->
+<div class="overlay" id="mapOverlay">
+  <div class="popup" style="max-width:560px;width:94%;padding:14px;">
+    <div class="popup-title" style="display:flex;justify-content:space-between;align-items:center;">
+      <span>🗺 저장된 장소</span>
+      <button onclick="closeMapPopup()" style="border:none;background:transparent;font-size:18px;cursor:pointer;color:var(--text2);line-height:1;">✕</button>
+    </div>
+    <div id="placeMap" style="height:60vh;border-radius:var(--input-radius);overflow:hidden;margin-top:10px;"></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script>
 const REPO_OWNER = 'yamugyclaude';
 const REPO_NAME  = 'jarvis-web';
@@ -441,6 +455,50 @@ async function loadPlacesFromGitHub() {
     }
   } catch(e) { /* 오프라인이면 localStorage 캐시 유지 */ }
 }
+
+// ── 지도 팝업 (Leaflet + OpenStreetMap) ──────────────────────
+let _leafletMap = null;
+
+function openMapPopup() {
+  document.getElementById('mapOverlay').classList.add('show');
+  setTimeout(() => {
+    if (!_leafletMap) {
+      _leafletMap = L.map('placeMap');
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap'
+      }).addTo(_leafletMap);
+    }
+    renderPlaceMarkers();
+  }, 50);
+}
+
+function closeMapPopup() {
+  document.getElementById('mapOverlay').classList.remove('show');
+}
+
+function renderPlaceMarkers() {
+  if (!_leafletMap) return;
+  _leafletMap.eachLayer(layer => { if (layer instanceof L.Marker) _leafletMap.removeLayer(layer); });
+  const pts = [];
+  Object.entries(_placeDB).forEach(([name, p]) => {
+    if (typeof p.lat === 'number' && typeof p.lng === 'number') {
+      const marker = L.marker([p.lat, p.lng]).addTo(_leafletMap);
+      marker.bindPopup(`<b>${name}</b>${p.cat ? ' · ' + p.cat : ''}`);
+      pts.push([p.lat, p.lng]);
+    }
+  });
+  if (pts.length) {
+    _leafletMap.fitBounds(pts, { padding: [30, 30], maxZoom: 16 });
+  } else {
+    _leafletMap.setView([36.5, 127.8], 7);
+  }
+  _leafletMap.invalidateSize();
+}
+
+document.getElementById('mapOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('mapOverlay')) closeMapPopup();
+});
 
 let _pendingPlace = '';
 let _selectedCat = '';

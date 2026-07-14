@@ -252,3 +252,23 @@
 ### 배포 이력
 - 버전: v2026.07.12.1 → v2026.07.13.1
 - 배포 일시: 2026-07-13
+
+## 2026-07-14 장소 기록 지도(Leaflet + OpenStreetMap) 팝업 추가
+
+### 작업 내용
+- 사장님 요청: 저장된 장소들(`places.json`, 위/경도 포함)을 지도에 마커로 확인하고 싶다는 요구. API 키가 필요 없는 OpenStreetMap 타일 + Leaflet.js(CDN)로 구현. 별도 페이지가 아니라 `index.html` 위에 기존 `.overlay`/`.popup` 패턴을 재사용한 모달 팝업으로 처리.
+- `<head>`에 Leaflet CSS, `</body>` 안 앱 스크립트 직전에 Leaflet JS CDN 추가.
+- "장소 기록" 카드에 "🗺 지도로 보기" 버튼(`.view-btn`) 추가, `openMapPopup()` 연결.
+- `#catOverlay`와 같은 구조로 `#mapOverlay`/`#placeMap` 오버레이 신설, 바깥 클릭 시 닫히는 이벤트도 기존 패턴 그대로 적용.
+- `openMapPopup()`/`closeMapPopup()`/`renderPlaceMarkers()` 신규 함수 추가. 이미 메모리에 있는 전역 `_placeDB`(페이지 로드 시 `loadPlacesFromGitHub()`가 채워둠)를 그대로 사용 — 별도 fetch 없음. 위/경도가 없는 장소는 마커에서 자동 제외(크래시 없이 스킵).
+
+### 결과
+- 성공: 앱 `<script>` 블록 `node --check` 통과. `mapOverlay`/`placeMap` id 중복 없음, 기존 `noteOverlay`/`catOverlay`와 동일한 오버레이 구조 확인.
+- `index.html` 버전 3곳(title/brand/footer) 갱신.
+
+### 배운 것 / 반복하면 안 되는 실수
+- 없음. Leaflet 컨테이너는 `display:none`이 아닌 상태에서 초기화해야 크기 계산이 정상 동작하므로, 오버레이가 `.show`로 표시된 직후 `setTimeout(...,50)`으로 지연 초기화하도록 했음(그대로 유지 필요).
+
+### 배포 이력
+- 버전: v2026.07.13.1 → v2026.07.14.1
+- 배포 일시: 2026-07-14
