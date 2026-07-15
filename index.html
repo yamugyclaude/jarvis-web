@@ -3,7 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>자비스 기록 v2026.07.15.1</title>
+  <!-- 카카오맵 SDK가 도메인 인증을 하려면 referer(도메인)가 전달돼야 함 -->
+  <meta name="referrer" content="no-referrer-when-downgrade">
+  <title>자비스 기록 v2026.07.15.2</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
@@ -122,7 +124,7 @@
 
   <!-- 헤더 -->
   <div class="header">
-    <div class="brand"><span>🤖</span><span>자비스 기록</span><span class="ver">v2026.07.15.1</span></div>
+    <div class="brand"><span>🤖</span><span>자비스 기록</span><span class="ver">v2026.07.15.2</span></div>
     <div style="display:flex;align-items:center;gap:8px;">
       <div class="moodbar">
         <button class="mood" data-t="concierge" onclick="setTheme('concierge')">비서</button>
@@ -267,7 +269,7 @@
 
   <div id="result"></div>
 
-  <div class="footer">v2026.07.15.1 · 조회 / 메모 / 장소 · 무드 4종(비서·자비스·조용·애플)</div>
+  <div class="footer">v2026.07.15.2 · 조회 / 메모 / 장소 · 무드 4종(비서·자비스·조용·애플)</div>
 </div>
 
 <!-- 메모 섹션 확인 팝업 -->
@@ -343,7 +345,7 @@
   </div>
 </div>
 
-<script src="//dapi.kakao.com/v2/maps/sdk.js?appkey=b6bc16c6f0f4c4cbf6a222e7debe7ddf&libraries=services&autoload=false"></script>
+<script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=b6bc16c6f0f4c4cbf6a222e7debe7ddf&libraries=services&autoload=false"></script>
 <script>
 const REPO_OWNER = 'yamugyclaude';
 const REPO_NAME  = 'jarvis-web';
