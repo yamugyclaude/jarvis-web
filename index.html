@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Nominatim 검색 요청 식별용 referer 전달 -->
   <meta name="referrer" content="no-referrer-when-downgrade">
-  <title>자비스 기록 v2026.07.15.4</title>
+  <title>자비스 기록 v2026.07.15.5</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
@@ -125,7 +125,7 @@
 
   <!-- 헤더 -->
   <div class="header">
-    <div class="brand"><span>🤖</span><span>자비스 기록</span><span class="ver">v2026.07.15.4</span></div>
+    <div class="brand"><span>🤖</span><span>자비스 기록</span><span class="ver">v2026.07.15.5</span></div>
     <div style="display:flex;align-items:center;gap:8px;">
       <div class="moodbar">
         <button class="mood" data-t="concierge" onclick="setTheme('concierge')">비서</button>
@@ -240,9 +240,23 @@
   <div class="card">
     <h2>메모 기록</h2>
     <div class="row">
-      <input type="text" id="noteInput" placeholder="내용을 적으세요..." onkeydown="if(event.key==='Enter') openNotePopup()">
+      <input type="text" id="noteInput" placeholder="내용을 적으세요..." oninput="onNoteInput()" onkeydown="if(event.key==='Enter') recordNote()">
     </div>
-    <button class="send-btn" onclick="openNotePopup()">기록하기</button>
+    <select id="noteSection" onchange="onNoteSectionChange()" style="width:100%;margin-top:6px;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--input-radius);font-size:13px;background:var(--card);color:var(--text);font-family:var(--font);">
+      <option value="memo">메모함</option>
+      <option value="work">오늘 한 일</option>
+      <option value="life">일상</option>
+      <option value="lunch">점심 식사</option>
+      <option value="dinner">저녁 식사</option>
+      <option value="good">잘 된 것</option>
+      <option value="learn">아쉬운 것 / 배운 것</option>
+      <option value="tomorrow">내일 할 것</option>
+    </select>
+    <div id="noteRestaurantWrap" style="display:none;margin-top:6px;">
+      <div class="popup-label">🍴 저장된 식당 (눌러서 추가):</div>
+      <div id="noteRestaurantChips" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </div>
+    <button class="send-btn" style="margin-top:8px;" onclick="recordNote()">기록하기</button>
   </div>
 
   <!-- 장소 기록 -->
@@ -270,34 +284,7 @@
 
   <div id="result"></div>
 
-  <div class="footer">v2026.07.15.4 · 조회 / 메모 / 장소 · 무드 4종(비서·자비스·조용·애플)</div>
-</div>
-
-<!-- 메모 섹션 확인 팝업 -->
-<div class="overlay" id="noteOverlay">
-  <div class="popup">
-    <div class="popup-title">📝 어디에 기록할까요?</div>
-    <div class="popup-text" id="popupText"></div>
-    <div class="popup-label">섹션 선택:</div>
-    <select id="popupSection" onchange="renderRestaurantChips()">
-      <option value="memo">메모함</option>
-      <option value="work">오늘 한 일</option>
-      <option value="life">일상</option>
-      <option value="lunch">점심 식사</option>
-      <option value="dinner">저녁 식사</option>
-      <option value="good">잘 된 것</option>
-      <option value="learn">아쉬운 것 / 배운 것</option>
-      <option value="tomorrow">내일 할 것</option>
-    </select>
-    <div id="restaurantChipWrap" style="display:none;margin-bottom:14px;">
-      <div class="popup-label">🍴 저장된 식당 (눌러서 추가):</div>
-      <div id="restaurantChips" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
-    </div>
-    <div class="popup-btns">
-      <button class="btn-cancel" onclick="closeNotePopup()">취소</button>
-      <button class="btn-confirm" onclick="confirmNote()">기록하기</button>
-    </div>
-  </div>
+  <div class="footer">v2026.07.15.5 · 조회 / 메모 / 장소 · 무드 4종(비서·자비스·조용·애플)</div>
 </div>
 
 <!-- 장소 카테고리 팝업 -->
@@ -933,24 +920,28 @@ const SECTION_LABELS = {
   learn:'아쉬운 것/배운 것', tomorrow:'내일 할 것'
 };
 
-function openNotePopup() {
+let _noteSectionTouched = false;
+
+function onNoteInput() {
+  if (_noteSectionTouched) return;
   const note = document.getElementById('noteInput').value.trim();
-  if (!note) { showResult('⚠️ 내용을 입력하세요.', false); return; }
-  const section = autoClassify(note);
-  document.getElementById('popupText').textContent = note;
-  document.getElementById('popupSection').value = section;
-  renderRestaurantChips();
-  document.getElementById('noteOverlay').classList.add('show');
+  if (note) document.getElementById('noteSection').value = autoClassify(note);
+  renderNoteRestaurantChips();
+}
+
+function onNoteSectionChange() {
+  _noteSectionTouched = true;
+  renderNoteRestaurantChips();
 }
 
 // 식사 섹션일 때 저장된 식당 칩 표시
-function renderRestaurantChips() {
-  const section = document.getElementById('popupSection').value;
-  const wrap = document.getElementById('restaurantChipWrap');
+function renderNoteRestaurantChips() {
+  const section = document.getElementById('noteSection').value;
+  const wrap = document.getElementById('noteRestaurantWrap');
   if (section !== 'lunch' && section !== 'dinner') { wrap.style.display = 'none'; return; }
   const restaurants = Object.keys(_placeDB).filter(p => (_placeDB[p].cat || '') === '식당');
   if (!restaurants.length) { wrap.style.display = 'none'; return; }
-  const box = document.getElementById('restaurantChips');
+  const box = document.getElementById('noteRestaurantChips');
   box.innerHTML = restaurants.map(r => `
     <button onclick="appendRestaurant('${r.replace(/'/g,"\\'")}')"
       style="padding:6px 14px;border:1.5px solid var(--border);border-radius:20px;
@@ -965,21 +956,17 @@ function appendRestaurant(name) {
   if (note.includes(name)) return;
   const newNote = note ? `${note} @${name}` : name;
   document.getElementById('noteInput').value = newNote;
-  document.getElementById('popupText').textContent = newNote;
 }
-function closeNotePopup() {
-  document.getElementById('noteOverlay').classList.remove('show');
-}
-function confirmNote() {
+
+function recordNote() {
   const note = document.getElementById('noteInput').value.trim();
-  const section = document.getElementById('popupSection').value;
-  closeNotePopup();
+  if (!note) { showResult('⚠️ 내용을 입력하세요.', false); return; }
+  const section = document.getElementById('noteSection').value;
   dispatch({ note, section });
   document.getElementById('noteInput').value = '';
+  _noteSectionTouched = false;
+  renderNoteRestaurantChips();
 }
-document.getElementById('noteOverlay').addEventListener('click', e => {
-  if (e.target === document.getElementById('noteOverlay')) closeNotePopup();
-});
 
 let _diaryFileSha = '';
 let _diaryRawText = '';

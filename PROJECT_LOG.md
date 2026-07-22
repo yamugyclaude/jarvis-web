@@ -403,3 +403,19 @@
 ### 배포 이력
 - 버전: v2026.07.15.3 → v2026.07.15.4
 - 배포 일시: 2026-07-22
+
+## 2026-07-22 메모 기록 2단계 → 1단계 간소화 (팝업 제거, 인라인 기록)
+
+### 작업 내용
+- 메모 기록이 입력 → 기록하기 → `#noteOverlay` 팝업에서 섹션 선택 → 또 기록하기(`confirmNote`)의 2단계였던 것을 1단계로 축소. 팝업을 완전히 없애고, 섹션 셀렉트(`#noteSection`)와 저장 식당 칩(`#noteRestaurantChips`)을 메모 카드 안에 인라인으로 배치.
+- 신규 함수: `onNoteInput()`(입력 시 미터치 상태면 `autoClassify` 결과를 셀렉트에 반영 + 칩 갱신), `onNoteSectionChange()`(수동 변경 시 자동분류 재적용 중단), `renderNoteRestaurantChips()`(기존 `renderRestaurantChips` 대체, lunch/dinner에서만 저장 식당 칩 표시), `recordNote()`(기존 `confirmNote` 대체, `dispatch({note, section})` 경로 그대로).
+- 삭제: `openNotePopup`, `confirmNote`, `closeNotePopup`, `renderRestaurantChips`, `#noteOverlay` 팝업 HTML, overlay 클릭 핸들러. `appendRestaurant`는 `popupText` 갱신 줄만 제거.
+- `autoClassify`, `dispatch`, `_placeDB`는 무변경.
+
+### 결과
+- 성공: `grep -nE "openNotePopup|confirmNote|closeNotePopup|noteOverlay|#popupSection|getElementById\('popupSection'\)|getElementById\('popupText'\)|getElementById\('restaurantChipWrap'\)" index.html` 0건으로 잔재 완전 제거 확인. 신규 함수(`recordNote`/`onNoteInput`/`onNoteSectionChange`/`renderNoteRestaurantChips`) 각 1회 정의. `node --check` 통과.
+- 헤드리스 Chromium 검증: PAGE ERROR 0건, body 정상 렌더(childCount 5, textLen 312) 확인.
+
+### 배포 이력
+- 버전: v2026.07.15.4 → v2026.07.15.5
+- 배포 일시: 2026-07-22
