@@ -524,7 +524,12 @@ function renderPlaceMarkers() {
   Object.entries(_placeDB).forEach(([name, p]) => {
     if (typeof p.lat === 'number' && typeof p.lng === 'number') {
       const marker = L.marker([p.lat, p.lng]).addTo(_leafletMap);
-      marker.bindPopup(`<b>${name}</b>${p.cat ? ' · ' + p.cat : ''}`);
+      const popupEl = document.createElement('div');
+      const nameEl = document.createElement('b');
+      nameEl.textContent = name;
+      popupEl.appendChild(nameEl);
+      if (p.cat) popupEl.appendChild(document.createTextNode(' · ' + p.cat));
+      marker.bindPopup(popupEl);
       _placeMarkers[name] = marker;
       pts.push([p.lat, p.lng]);
     }
