@@ -364,3 +364,24 @@
 ### 배포 이력
 - 버전: v2026.07.14.5 → v2026.07.14.6
 - 배포 일시: 2026-07-14
+
+## 2026-07-22 카카오맵 승인 게이트로 중단 — Leaflet+OSM 원복 + Nominatim 검색 도입
+
+### 작업 내용
+- 카카오맵 키 발급·`https://yamugyclaude.github.io` 도메인 등록·[카카오맵] 사용설정 ON·SDK 스크립트 태그까지 전부 정상 확인했으나, 실제 페이지(referer=github.io)에서 SDK를 부르면 **서버 단에서 거부**됨. SDK URL 직접 접근은 정상 응답하는데 페이지 컨텍스트로만 막히는 것으로 보아 원인은 카카오 계정/앱의 **카카오맵 호출 권한 승인 게이트**(신규 앱·계정 내 2번째 이상 앱은 별도 심사 필요, 며칠 소요)로 판단 — 코드로 해결 불가.
+- 목적(장소 검색)을 살리기 위해 지도 엔진을 직전 정상 커밋 `8576c94` 기준 **Leaflet + OpenStreetMap**으로 원복. `<head>` Leaflet CSS 복원, 카카오 SDK `<script>` 자리를 Leaflet JS로 교체. `_kakaoMap`→`_leafletMap`, `_placeInfoWindow`/`openPlaceInfo` 삭제 후 `bindPopup`/`openPopup`으로 대체. `openMapPopup`/`renderPlaceMarkers`/`flyToPlace`/`onMapClick`/`resetMapPick`/`confirmMapPick`을 Leaflet API로 원복.
+- 검색은 키·카드·승인이 전혀 필요 없는 **OSM Nominatim**으로 교체. `searchPlaces()`가 `nominatim.openstreetmap.org/search`(countrycodes=kr, accept-language=ko)를 호출하고, `renderSearchResults()`가 `{display_name, lat, lon}` 배열을 `textContent`로 안전하게 렌더(이름=`display_name` 첫 조각, 부제=전체), 클릭 시 `pickSearchResult(name, lat, lng)`가 지도 이동+임시마커+`_pendingCoord` 설정+이름 자동 입력 후 기존 `#mapPickBar`→"다음"→`confirmMapPick()`→카테고리 팝업 흐름에 그대로 얹음. 검색 UI(`#mapSearchInput`/`#mapSearchResults`)와 `_pendingCoord`→카테고리 등록 흐름은 손대지 않음.
+- `<meta name="referrer" content="no-referrer-when-downgrade">`는 유지(Nominatim 요청 식별에 도움).
+
+### 결과
+- 성공: 앱 `<script>` 블록 `node --check` 통과. `grep -iE "kakao|dapi\.kakao|_kakaoMap|kakao\.maps|openPlaceInfo" index.html` 0건으로 카카오 잔재 완전 제거 확인. `L.map`/`L.marker`/`L.tileLayer`/`_leafletMap` 참조 복원 확인. 좌표 순서 리뷰: Leaflet은 `[lat,lng]` 배열 일관, Nominatim은 `lat`=위도/`lon`=경도로 `parseFloat` 처리 정확(카카오의 `x`=경도/`y`=위도와 반대이므로 뒤바뀌지 않게 재확인). 신규/변경 함수(`searchPlaces`/`renderSearchResults`/`pickSearchResult`) 각 1회 정의.
+- `index.html` 버전 3곳(title/brand/footer) 갱신.
+- Nominatim 한계(정직히 기록): 주소·행정구역·큰 시설은 잘 찾으나, OSM 데이터에 등록 안 된 작은 식당·상호는 검색 결과에 안 나올 수 있음.
+- 실제 지도 렌더링/검색 라이브 동작은 이 환경에서 확인 불가(코드 검증만 가능) — 배포 후 사장님 직접 확인 필요.
+
+### 배운 것 / 반복하면 안 되는 실수
+- 키·도메인·설정이 코드상 전부 정상이어도, 외부 지도 SDK는 계정/앱 단위의 **서버 측 승인 절차**가 별도로 걸릴 수 있다는 것을 미리 감안할 것. 승인 지연이 확인되면 코드로 붙잡고 있지 말고 즉시 대안(키 불필요한 오픈 서비스)으로 전환 판단할 것.
+
+### 배포 이력
+- 버전: v2026.07.15.2 → v2026.07.15.3
+- 배포 일시: 2026-07-22
