@@ -419,3 +419,18 @@
 ### 배포 이력
 - 버전: v2026.07.15.4 → v2026.07.15.5
 - 배포 일시: 2026-07-22
+
+## 2026-07-23 지도 팝업에 "현재 위치" 버튼 추가
+
+### 작업 내용
+- 지도 팝업 하단 "지도 찍어 새 장소 추가" 버튼 1개를, "📍 현재 위치" + "🗺 지도 찍어 추가" 2개를 담는 컨테이너 `#mapAddBtns`(flex)로 교체. 기존 `id="mapPickBtn"`은 유지.
+- 신규 `useCurrentLocation()`: 기존 `getGPS()`와 `pickSearchResult()` 패턴을 그대로 재활용 — GPS로 좌표를 얻어 지도를 `flyTo`, 임시 마커 표시, `_pendingCoord` 설정, `#mapPickBar` 노출 후 이름 입력만 받으면 기존 등록 흐름(다음 → `confirmMapPick` → 카테고리 → 기록)에 그대로 얹힘.
+- `mapPickBtn` 표시/숨김 토글 전부를 `#mapAddBtns` 기준으로 통일(`startMapPick`, `resetMapPick`, `confirmMapPick`, `pickSearchResult`, `useCurrentLocation`). `onclick="startMapPick()"`만 `mapPickBtn`에 남김.
+
+### 결과
+- 성공: `grep -n "mapPickBtn"` 확인 결과 display 토글은 전부 `#mapAddBtns`로 이전, `onclick="startMapPick()"`만 잔존. `useCurrentLocation` 1회 정의, `getGPS`/`_pendingCoord`/`confirmMapPick`/`confirmCategory` 무변경.
+- `node --check` 통과. 헤드리스 Chromium 검증: PAGE ERROR 0건, body 정상 렌더(childCount 5, textLen 312).
+
+### 배포 이력
+- 버전: v2026.07.15.5 → v2026.07.15.6
+- 배포 일시: 2026-07-23
