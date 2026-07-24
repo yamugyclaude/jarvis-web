@@ -267,7 +267,7 @@
       color:var(--arrive);" onclick="acceptNear()"></div>
     <div class="row" style="position:relative;">
       <input type="text" id="placeInput" placeholder="장소 이름 (예: 신혜식당)" autocomplete="off"
-        oninput="onPlaceInput()" onkeydown="onPlaceKey(event)" onfocus="checkNearby()">
+        oninput="onPlaceInput()" onkeydown="onPlaceKey(event)" onfocus="onPlaceFocus()">
       <div id="placeDropdown" style="display:none;position:absolute;top:100%;left:0;right:0;
         background:var(--card);border:1.5px solid var(--border);border-radius:var(--input-radius);
         z-index:50;max-height:180px;overflow-y:auto;margin-top:2px;"></div>
@@ -284,7 +284,7 @@
 
   <div id="result"></div>
 
-  <div class="footer">v2026.07.15.7 · 조회 / 메모 / 장소 · 무드 4종(비서·자비스·조용·애플)</div>
+  <div class="footer">v2026.07.24.1 · 조회 / 메모 / 장소 · 무드 4종(비서·자비스·조용·애플)</div>
 </div>
 
 <!-- 장소 카테고리 팝업 -->
@@ -852,26 +852,121 @@ document.getElementById('catOverlay').addEventListener('click', e => {
   if (e.target === document.getElementById('catOverlay')) closeCatPopup();
 });
 
-// ── 장소 자동완성 ──────────────────────────────────────────────
+// ── 장소 자동완성 / 목록 드롭다운 ────────────────────────────────
 function onPlaceInput() {
-  const val = document.getElementById('placeInput').value.trim();
+  renderPlaceDropdown(document.getElementById('placeInput').value.trim());
+}
+
+// 입력칸 포커스 → 근처 힌트 + 저장된 전체 목록 표시
+function onPlaceFocus() {
+  checkNearby();
+  renderPlaceDropdown(document.getElementById('placeInput').value.trim());
+}
+
+// filter 없으면 카테고리별 전체 목록, 있으면 매칭 항목만.
+// 각 항목: 이름 클릭 = 즉시 기록, ✏️ 수정, 🗑 삭제
+function renderPlaceDropdown(filter) {
   const db = getPlaceDB();
-  if (!val) { closePlaceDropdown(); return; }
-  const matches = Object.keys(db).filter(p => p.includes(val));
-  if (!matches.length) { closePlaceDropdown(); return; }
   const dd = document.getElementById('placeDropdown');
-  dd.innerHTML = matches.map(p => {
-    const cat = db[p].cat || '';
-    return `<div onclick="selectPlace('${p.replace(/'/g,"\\'")}')"
-      style="padding:10px 12px;cursor:pointer;font-size:14px;border-bottom:1px solid var(--border);
-      display:flex;justify-content:space-between;align-items:center;"
-      onmouseenter="this.style.background='var(--meta-bg)'" onmouseleave="this.style.background='transparent'">
-      <span>${p}</span>
-      ${cat ? `<span style="font-size:11px;color:var(--text2);background:var(--meta-bg);
-        padding:2px 8px;border-radius:10px;">${cat}</span>` : ''}
-    </div>`;
-  }).join('');
+  let names = Object.keys(db);
+  if (filter) names = names.filter(p => p.includes(filter));
+  if (!names.length) { closePlaceDropdown(); return; }
+
+  const groups = {};
+  names.forEach(n => { const c = db[n].cat || '기타'; (groups[c] = groups[c] || []).push(n); });
+
+  dd.innerHTML = '';
+  Object.keys(groups).sort().forEach(cat => {
+    const head = document.createElement('div');
+    head.textContent = cat;
+    head.style.cssText = 'padding:6px 12px;font-size:11px;font-weight:700;color:var(--text2);background:var(--meta-bg);position:sticky;top:0;';
+    dd.appendChild(head);
+
+    groups[cat].forEach(name => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:4px;padding:8px 12px;border-bottom:1px solid var(--border);';
+
+      const label = document.createElement('span');
+      label.textContent = name;
+      label.style.cssText = 'flex:1;cursor:pointer;font-size:14px;color:var(--text);';
+      label.addEventListener('click', () => recordFromDropdown(name));
+
+      const edit = document.createElement('button');
+      edit.textContent = '✏️'; edit.title = '수정';
+      edit.style.cssText = 'border:none;background:transparent;cursor:pointer;font-size:14px;padding:2px 4px;';
+      edit.addEventListener('click', e => { e.stopPropagation(); editPlace(name); });
+
+      const del = document.createElement('button');
+      del.textContent = '🗑'; del.title = '삭제';
+      del.style.cssText = 'border:none;background:transparent;cursor:pointer;font-size:14px;padding:2px 4px;';
+      del.addEventListener('click', e => { e.stopPropagation(); deletePlace(name); });
+
+      row.appendChild(label); row.appendChild(edit); row.appendChild(del);
+      dd.appendChild(row);
+    });
+  });
   dd.style.display = 'block';
+}
+
+// 드롭다운 이름 클릭 → 저장된 좌표로 바로 방문 기록
+function recordFromDropdown(name) {
+  closePlaceDropdown();
+  document.getElementById('placeInput').value = '';
+  recordPlaceVisit(name);
+}
+
+// places.json을 GitHub(data 브랜치)에 직접 커밋 → 수정·삭제 영구 반영
+async function savePlacesToGitHub() {
+  const token = getToken();
+  if (!token) return false;
+  const clean = token.replace(/[^\x20-\x7E]/g, '');
+  const url = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/places.json`;
+  let sha = null;
+  try {
+    const r = await fetch(`${url}?ref=${REF}`, { headers: { 'Authorization': `token ${clean}`, 'Accept': 'application/vnd.github+json' } });
+    if (r.ok) { const d = await r.json(); sha = d.sha; }
+  } catch (e) { /* SHA 못 얻으면 아래 PUT이 실패로 처리됨 */ }
+  const text = JSON.stringify({ places: _placeDB }, null, 2);
+  const body = { message: '장소 수정 (웹앱)', content: btoa(unescape(encodeURIComponent(text))), branch: REF };
+  if (sha) body.sha = sha;
+  try {
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Authorization': `token ${clean}`, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    return res.ok;
+  } catch (e) { return false; }
+}
+
+// 장소 수정 (이름 + 카테고리)
+async function editPlace(name) {
+  const db = getPlaceDB();
+  const p = db[name];
+  if (!p) return;
+  const newName = (prompt('장소 이름 수정:', name) || '').trim();
+  if (!newName) return;
+  const newCat = (prompt('카테고리 수정:', p.cat || '기타') || '').trim() || '기타';
+  if (newName !== name && db[newName]) { showResult('⚠️ 같은 이름의 장소가 이미 있습니다.', false); return; }
+  if (newName !== name) { db[newName] = { ...p, cat: newCat }; delete db[name]; }
+  else { db[name] = { ...p, cat: newCat }; }
+  savePlaceDB(db);
+  renderPlaceDropdown(document.getElementById('placeInput').value.trim());
+  showResult('⏳ 저장 중...', true);
+  const ok = await savePlacesToGitHub();
+  showResult(ok ? '✅ 수정 완료 (동기화됨)' : '⚠️ 로컬만 반영됨 (동기화 실패 — 토큰 확인)', ok);
+}
+
+// 장소 삭제
+async function deletePlace(name) {
+  if (!confirm(`"${name}" 장소를 삭제할까요?`)) return;
+  const db = getPlaceDB();
+  delete db[name];
+  savePlaceDB(db);
+  renderPlaceDropdown(document.getElementById('placeInput').value.trim());
+  showResult('⏳ 삭제 중...', true);
+  const ok = await savePlacesToGitHub();
+  showResult(ok ? '✅ 삭제 완료 (동기화됨)' : '⚠️ 로컬만 삭제됨 (동기화 실패 — 토큰 확인)', ok);
 }
 
 function onPlaceKey(e) {
