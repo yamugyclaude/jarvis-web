@@ -104,7 +104,7 @@
 const REPO_OWNER = 'yamugyclaude';
 const REPO_NAME  = 'jarvis-web';
 const REF        = 'data';
-const INDEX_KEY  = 'jarvis_search_index_v1';
+const INDEX_KEY  = 'jarvis_search_index_v2';
 
 // ── 토큰 ──────────────────────────────────────────────────
 function getToken() { return localStorage.getItem('jarvis_gh_token') || ''; }
@@ -140,6 +140,9 @@ function extractLines(md, date, items) {
       items.push({ date, time: m[1], text: m[2].trim(), kind: 'diary' });
     } else if ((m = line.match(/^>\s*📍\s*(\d{1,2}:\d{2})\s*[—–-]\s*(.+)$/))) {
       items.push({ date, time: m[1], text: m[2].trim(), kind: 'log' });
+    } else if ((m = line.match(/^-\s+(.+)$/))) {
+      // 시간(HH:MM) 없이 적은 불릿도 인덱싱 (예: "- 장어구이", "- 죽림 수정돼지국밥")
+      items.push({ date, time: '', text: m[1].trim(), kind: 'diary' });
     }
   });
 }
