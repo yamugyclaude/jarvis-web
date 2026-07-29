@@ -116,7 +116,7 @@
 const REPO_OWNER = 'yamugyclaude';
 const REPO_NAME  = 'jarvis-web';
 const REF        = 'data';
-const INDEX_KEY  = 'jarvis_search_index_v2';
+const INDEX_KEY  = 'jarvis_search_index_v3';
 
 // ── 토큰 ──────────────────────────────────────────────────
 function getToken() { return localStorage.getItem('jarvis_gh_token') || ''; }
@@ -163,6 +163,23 @@ function decodeContent(b64) {
   return decodeURIComponent(escape(atob(b64.replace(/\n/g, ''))));
 }
 
+// diary/{year}/{month}/*.md 경로를 Contents API로만 순회 (Git Trees API는 파인그레인드
+// 토큰에서 401이 날 수 있어 쓰지 않음 — 다른 페이지들과 동일하게 Contents API로 통일)
+async function listDiaryFiles() {
+  const base = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents`;
+  const listDir = async (path) => {
+    const r = await fetch(`${base}/${path}?ref=${REF}`, { headers: ghHeaders() });
+    if (r.status === 404) return [];
+    if (!r.ok) throw new Error(`${r.status}`);
+    return r.json();
+  };
+  const years = (await listDir('diary')).filter(e => e.type === 'dir');
+  const monthLists = await Promise.all(years.map(y => listDir(y.path)));
+  const months = monthLists.flat().filter(e => e.type === 'dir');
+  const fileLists = await Promise.all(months.map(m => listDir(m.path)));
+  return fileLists.flat().filter(e => e.type === 'file' && /\.md$/.test(e.name));
+}
+
 async function buildIndex(force) {
   if (!checkToken()) return;
   // 캐시 우선 표시(빠른 첫 화면)
@@ -175,24 +192,31 @@ async function buildIndex(force) {
   }
 
   try {
-    // 1) 트리 1회 호출로 diary 파일 경로 전체 확보
-    const treeUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/git/trees/${REF}?recursive=1`;
-    const tr = await fetch(treeUrl, { headers: ghHeaders() });
-    if (!tr.ok) { setStatus(`오류 ${tr.status}`); if (!_index.length) showResult(`❌ 불러오기 오류 ${tr.status}`, false); return; }
-    const tree = await tr.json();
-    const sha = tree.sha;
+    // 1) diary 파일 목록(경로+sha) 확보
+    let files;
+    try {
+      files = await listDiaryFiles();
+    } catch (e) {
+      const code = e.message;
+      setStatus(`오류 ${code}`);
+      if (!_index.length) {
+        const hint = code === '401' ? ' — 토큰이 만료됐거나 잘못됐을 수 있어요. 새 토큰으로 다시 저장해 보세요.' : '';
+        showResult(`❌ 불러오기 오류 ${code}${hint}`, false);
+      }
+      return;
+    }
+    // 파일 sha들을 정렬해 이어붙인 값 = 캐시 무효화 판단용 지문
+    const fingerprint = files.map(f => f.sha).sort().join(',');
 
-    // 캐시가 최신 트리면 재빌드 생략
-    if (!force && cached && cached.sha === sha && Array.isArray(cached.items)) {
+    // 캐시가 최신이면 재빌드 생략
+    if (!force && cached && cached.fingerprint === fingerprint && Array.isArray(cached.items)) {
       _index = cached.items;
       setStatus(`준비됨 · ${_index.length}건`);
       return;
     }
     setStatus('⏳ 불러오는 중...');
 
-    const diaryPaths = (tree.tree || [])
-      .filter(t => t.type === 'blob' && /^diary\/.*\.md$/.test(t.path))
-      .map(t => t.path);
+    const diaryPaths = files.map(f => f.path);
 
     const items = [];
     // 2) 각 diary md
@@ -227,7 +251,7 @@ async function buildIndex(force) {
     } catch (e) { /* 장소 없으면 스킵 */ }
 
     _index = items;
-    localStorage.setItem(INDEX_KEY, JSON.stringify({ sha, items, built_at: Date.now() }));
+    localStorage.setItem(INDEX_KEY, JSON.stringify({ fingerprint, items, built_at: Date.now() }));
     setStatus(`준비됨 · ${items.length}건`);
     if (force) showResult(`✅ 새로고침 완료 · ${items.length}건`, true);
   } catch (e) {

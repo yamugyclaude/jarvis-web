@@ -14,6 +14,23 @@
 
 <!-- 아래부터 기록 -->
 
+## 2026-07-30 성공 (기록검색 401 오류 수정 — 배포 후 사장 신고)
+### 작업 내용
+- 사장님이 chatbot.html 기록검색에서 "불러오기 오류 401" 신고
+- 원인: chatbot.html만 다른 페이지와 달리 Git Trees API(git/trees/data)를 사용 — 파인그레인드 GitHub 토큰은 이 API(Git Data API)를 지원하지 않아 401이 나는 게 알려진 GitHub 제약. index/attendance/vehicle 페이지는 전부 Contents API만 써서 문제없었음
+- 조치: Git Trees API 완전 제거, index/attendance/vehicle과 동일하게 Contents API로 diary/{year}/{month} 3단계 디렉터리 순회(listDiaryFiles)로 교체. 캐시 무효화 키도 tree sha 대신 파일 sha 목록을 정렬해 이어붙인 fingerprint로 교체(INDEX_KEY v2→v3)
+- 401 발생 시 안내 문구 추가: "토큰이 만료됐거나 잘못됐을 수 있어요. 새 토큰으로 다시 저장해 보세요."
+
+### 결과
+- 성공: 로컬 임시 Playwright 스크립트(저장소 미포함, fetch 목킹)로 (1)git/trees 호출 시 즉시 예외 던지도록 만들어 실제로 전혀 호출되지 않음 확인 (2)3단계 디렉터리 순회로 인덱스 정상 구성 (3)캐시 재사용(재빌드 생략) (4)401 발생 시(캐시 있음/없음 두 경우 모두) 상태·안내 문구 정상 표시 — 페이지 에러 0건
+
+### 배운 것 / 반복하면 안 되는 실수
+- 새 페이지를 만들 때 기존에 검증된 API 방식(Contents API)에서 벗어나 새로운 API(Git Trees)를 쓰면, 토큰 종류(classic vs fine-grained)에 따라 조용히 깨질 수 있음 — 같은 앱 내에서는 이미 동작 확인된 API 패턴을 우선 재사용할 것
+
+### 배포 이력
+- 버전: v2026.07.29.3 (버전 번호 유지, 버그 수정)
+- 배포 일시: 2026-07-30
+
 ## 2026-07-30 성공 (대화용 AI 챗봇 — 파트 B)
 ### 작업 내용
 - chatbot.html에 🤖 AI 설정 패널 추가 — API 주소/키/모델명 입력(localStorage 저장), 기본값 Gemini 무료 OpenAI 호환 엔드포인트(generativelanguage.googleapis.com/v1beta/openai, gemini-2.0-flash)
