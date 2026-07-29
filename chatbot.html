@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>기록 검색 · 자비스 기록</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body[data-theme="concierge"]{--bg:oklch(0.985 0.007 75);--card:#ffffff;--text:oklch(0.24 0.01 60);--text2:oklch(0.55 0.02 60);--border:oklch(0.92 0.008 70);--btn-bg:oklch(0.62 0.13 45);--btn-text:#fff;--arrive:oklch(0.5 0.11 150);--depart:oklch(0.58 0.16 30);--ok-bg:oklch(0.95 0.04 150);--ok-text:oklch(0.42 0.11 150);--err-bg:oklch(0.95 0.045 30);--err-text:oklch(0.5 0.16 30);--meta-bg:oklch(0.97 0.006 70);--shadow:0 1px 3px rgba(60,40,20,0.08);--radius:18px;--input-radius:12px;--font:'Pretendard',sans-serif;--head:'Pretendard',sans-serif;--mono:'JetBrains Mono',monospace;--page:oklch(0.955 0.006 70);--grid:none;--accent:oklch(0.62 0.13 45);--label-tt:uppercase;--label-sp:0.5px;}
+    body[data-theme="hud"]{--bg:oklch(0.15 0.012 250);--card:oklch(0.19 0.012 250);--text:oklch(0.92 0.01 220);--text2:oklch(0.6 0.02 220);--border:oklch(0.34 0.02 220);--btn-bg:oklch(0.78 0.13 200);--btn-text:oklch(0.15 0.012 250);--arrive:oklch(0.82 0.13 200);--depart:oklch(0.72 0.16 25);--ok-bg:oklch(0.3 0.05 200);--ok-text:oklch(0.85 0.13 200);--err-bg:oklch(0.3 0.08 25);--err-text:oklch(0.82 0.14 25);--meta-bg:oklch(0.22 0.012 250);--shadow:0 0 0 1px oklch(0.3 0.02 220);--radius:10px;--input-radius:8px;--font:'Pretendard',sans-serif;--head:'Space Grotesk',sans-serif;--mono:'JetBrains Mono',monospace;--page:oklch(0.1 0.01 250);--grid:linear-gradient(oklch(0.2 0.012 250) 1px,transparent 1px),linear-gradient(90deg,oklch(0.2 0.012 250) 1px,transparent 1px);--accent:oklch(0.78 0.13 200);--label-tt:uppercase;--label-sp:1.5px;}
+    body[data-theme="calm"]{--bg:oklch(0.985 0.003 255);--card:oklch(0.985 0.003 255);--text:oklch(0.26 0.01 255);--text2:oklch(0.58 0.01 255);--border:oklch(0.9 0.004 255);--btn-bg:oklch(0.5 0.06 155);--btn-text:#fff;--arrive:oklch(0.5 0.09 150);--depart:oklch(0.55 0.1 30);--ok-bg:oklch(0.96 0.02 155);--ok-text:oklch(0.42 0.07 155);--err-bg:oklch(0.96 0.02 30);--err-text:oklch(0.5 0.12 30);--meta-bg:oklch(0.97 0.003 255);--shadow:none;--radius:14px;--input-radius:12px;--font:'Pretendard',sans-serif;--head:'Space Grotesk',sans-serif;--mono:'Space Grotesk',sans-serif;--page:oklch(0.965 0.003 255);--grid:none;--accent:oklch(0.5 0.06 155);--label-tt:none;--label-sp:0;}
+    body[data-theme="apple"]{--bg:#ffffff;--card:#ffffff;--text:oklch(0.2 0.003 255);--text2:oklch(0.53 0.006 255);--border:oklch(0.91 0.003 255);--btn-bg:oklch(0.58 0.19 260);--btn-text:#fff;--arrive:oklch(0.66 0.17 145);--depart:oklch(0.63 0.22 25);--ok-bg:oklch(0.95 0.05 145);--ok-text:oklch(0.45 0.14 145);--err-bg:oklch(0.95 0.05 25);--err-text:oklch(0.52 0.19 25);--meta-bg:oklch(0.965 0.003 255);--shadow:0 1px 2px rgba(0,0,0,0.04),0 6px 20px rgba(0,0,0,0.06);--radius:20px;--input-radius:14px;--font:-apple-system,BlinkMacSystemFont,'SF Pro Display','Pretendard',sans-serif;--head:-apple-system,BlinkMacSystemFont,'SF Pro Display','Pretendard',sans-serif;--mono:'SF Mono','JetBrains Mono',monospace;--page:oklch(0.975 0.002 255);--grid:none;--accent:oklch(0.58 0.19 260);--label-tt:none;--label-sp:0;}
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body{background:var(--page);color:var(--text);font-family:var(--font);-webkit-font-smoothing:antialiased;transition:background .25s,color .25s;}
+    .mono{font-family:var(--mono);}
+    .container{max-width:600px;margin:0 auto;padding:18px 18px 60px;background-image:var(--grid);background-size:26px 26px;min-height:100vh;position:relative;}
+
+    /* 헤더 */
+    .header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px;position:relative;z-index:2;flex-wrap:wrap;}
+    .brand{display:flex;align-items:center;gap:7px;font-family:var(--head);font-weight:700;font-size:16px;letter-spacing:-0.01em;}
+    .icon-btn{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:var(--input-radius);padding:8px 11px;font-size:13px;cursor:pointer;text-decoration:none;display:inline-block;font-family:var(--font);}
+
+    /* 카드 */
+    .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:var(--shadow);position:relative;z-index:2;}
+    h2{font-size:12px;font-weight:700;color:var(--text2);text-transform:var(--label-tt);letter-spacing:var(--label-sp);margin-bottom:12px;font-family:var(--font);}
+    body[data-theme="hud"] h2{color:var(--accent);font-family:var(--mono);}
+    body[data-theme="hud"] h2::before{content:'> ';}
+
+    /* 토큰 배너 */
+    .token-banner{background:var(--card);border:1px solid var(--accent);border-radius:var(--radius);padding:14px;margin-bottom:14px;font-size:13px;color:var(--text);position:relative;z-index:2;}
+    .token-banner input{width:100%;margin-top:8px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--input-radius);font-size:13px;font-family:var(--mono);background:var(--card);color:var(--text);}
+    .token-banner button{margin-top:8px;padding:7px 16px;background:var(--btn-bg);color:var(--btn-text);border:none;border-radius:var(--input-radius);font-size:13px;cursor:pointer;font-family:var(--font);}
+
+    /* 인풋 */
+    .row{display:flex;gap:8px;margin-bottom:10px;}
+    input[type=text]{padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--input-radius);font-size:14px;background:var(--card);color:var(--text);font-family:var(--font);width:100%;}
+    input:focus{outline:none;border-color:var(--accent);}
+
+    /* 전송 버튼 */
+    .send-btn{width:100%;padding:12px;background:var(--btn-bg);color:var(--btn-text);border:none;border-radius:var(--input-radius);font-size:14px;font-weight:700;cursor:pointer;font-family:var(--font);}
+    .send-btn:active{opacity:.85;}
+    body[data-theme="hud"] .send-btn{font-family:var(--mono);letter-spacing:1px;}
+
+    /* 챗봇 */
+    #idxStatus{float:right;font-size:11px;color:var(--text2);font-weight:400;text-transform:none;letter-spacing:0;font-family:var(--mono);}
+    .chat-log{max-height:56vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 2px 10px;margin-bottom:10px;}
+    .bubble{max-width:92%;padding:10px 12px;border-radius:14px;font-size:14px;line-height:1.5;word-break:break-word;}
+    .bubble.user{align-self:flex-end;background:var(--btn-bg);color:var(--btn-text);border-bottom-right-radius:4px;}
+    .bubble.bot{align-self:flex-start;background:var(--meta-bg);color:var(--text);border-bottom-left-radius:4px;}
+    .result-item{display:flex;flex-direction:column;gap:2px;padding:8px 10px;margin-top:6px;background:var(--card);border:1px solid var(--border);border-radius:var(--input-radius);cursor:pointer;}
+    .result-item:active{opacity:.8;}
+    .result-meta{font-size:11px;color:var(--text2);font-family:var(--mono);}
+    .result-text{font-size:13px;color:var(--text);}
+    mark{background:var(--accent);color:var(--btn-text);border-radius:3px;padding:0 2px;}
+
+    /* 결과 토스트 */
+    #result{position:fixed;top:14px;left:50%;transform:translateX(-50%);width:calc(100% - 36px);max-width:564px;margin:0;padding:12px 16px;border-radius:var(--input-radius);font-size:13px;text-align:center;display:none;z-index:100;font-family:var(--font);box-shadow:var(--shadow);}
+    #result.ok{background:var(--ok-bg);color:var(--ok-text);}
+    #result.err{background:var(--err-bg);color:var(--err-text);}
+
+    .footer{text-align:center;color:var(--text2);font-size:11px;padding:16px 0 20px;position:relative;z-index:2;}
+    body[data-theme="hud"] .footer{font-family:var(--mono);}
+  </style>
+</head>
+<body data-theme="concierge">
+<div class="container">
+
+  <!-- 헤더 -->
+  <div class="header">
+    <div class="brand"><span>🔎</span><span>기록 검색</span></div>
+    <div style="display:flex;gap:6px;">
+      <button class="icon-btn" onclick="buildIndex(true)">🔄 새로고침</button>
+      <a class="icon-btn" href="index.html">← 돌아가기</a>
+    </div>
+  </div>
+
+  <!-- 토큰 배너 -->
+  <div class="token-banner" id="tokenBanner">
+    <strong>⚙️ 처음 한 번만:</strong> GitHub 토큰을 입력하세요.
+    <input type="password" id="tokenInput" placeholder="ghp_...">
+    <button onclick="saveToken()">저장</button>
+  </div>
+
+  <!-- 챗봇 -->
+  <div class="card">
+    <h2>🔎 기록 검색 <span id="idxStatus"></span></h2>
+    <div id="chatLog" class="chat-log"></div>
+    <div class="row" style="margin-bottom:0;">
+      <input type="text" id="chatInput" placeholder="검색어 (예: 신혜식당, 당구, 창고)" onkeydown="if(event.key==='Enter')onSend()">
+      <button class="send-btn" style="width:auto;padding:12px 18px;" onclick="onSend()">검색</button>
+    </div>
+  </div>
+
+  <div id="result"></div>
+
+  <div class="footer">기록 검색 · 일지·장소에서 키워드로 찾기</div>
+</div>
+
+<script>
+const REPO_OWNER = 'yamugyclaude';
+const REPO_NAME  = 'jarvis-web';
+const REF        = 'data';
+const INDEX_KEY  = 'jarvis_search_index_v1';
+
+// ── 토큰 ──────────────────────────────────────────────────
+function getToken() { return localStorage.getItem('jarvis_gh_token') || ''; }
+function saveToken() {
+  const val = document.getElementById('tokenInput').value.trim().replace(/[^\x20-\x7E]/g, '');
+  if (!val) return;
+  localStorage.setItem('jarvis_gh_token', val);
+  document.getElementById('tokenBanner').style.display = 'none';
+  showResult('✅ 토큰 저장 완료!', true);
+  buildIndex(true);
+}
+function checkToken() {
+  if (getToken()) { document.getElementById('tokenBanner').style.display = 'none'; return true; }
+  document.getElementById('tokenBanner').style.display = 'block';
+  return false;
+}
+function ghHeaders() {
+  return { 'Authorization': `token ${getToken().replace(/[^\x20-\x7E]/g, '')}`, 'Accept': 'application/vnd.github+json' };
+}
+
+// ── 검색 인덱스 (일지 + 장소) ──────────────────────────────
+// 항목: { date:'YYYY-MM-DD', time:'HH:MM', text, kind:'diary'|'log'|'place' }
+let _index = [];
+
+function setStatus(msg) { document.getElementById('idxStatus').textContent = msg; }
+
+// md 본문에서 검색 대상 라인 추출
+function extractLines(md, date, items) {
+  md.split('\n').forEach(raw => {
+    const line = raw.trim();
+    let m;
+    if ((m = line.match(/^-\s+(\d{1,2}:\d{2})\s+(.+)$/))) {
+      items.push({ date, time: m[1], text: m[2].trim(), kind: 'diary' });
+    } else if ((m = line.match(/^>\s*📍\s*(\d{1,2}:\d{2})\s*[—–-]\s*(.+)$/))) {
+      items.push({ date, time: m[1], text: m[2].trim(), kind: 'log' });
+    }
+  });
+}
+
+function decodeContent(b64) {
+  return decodeURIComponent(escape(atob(b64.replace(/\n/g, ''))));
+}
+
+async function buildIndex(force) {
+  if (!checkToken()) return;
+  // 캐시 우선 표시(빠른 첫 화면)
+  const cached = safeParse(localStorage.getItem(INDEX_KEY));
+  if (!force && cached && Array.isArray(cached.items)) {
+    _index = cached.items;
+    setStatus(`준비됨 · ${_index.length}건`);
+  } else {
+    setStatus('⏳ 불러오는 중...');
+  }
+
+  try {
+    // 1) 트리 1회 호출로 diary 파일 경로 전체 확보
+    const treeUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/git/trees/${REF}?recursive=1`;
+    const tr = await fetch(treeUrl, { headers: ghHeaders() });
+    if (!tr.ok) { setStatus(`오류 ${tr.status}`); if (!_index.length) showResult(`❌ 불러오기 오류 ${tr.status}`, false); return; }
+    const tree = await tr.json();
+    const sha = tree.sha;
+
+    // 캐시가 최신 트리면 재빌드 생략
+    if (!force && cached && cached.sha === sha && Array.isArray(cached.items)) {
+      _index = cached.items;
+      setStatus(`준비됨 · ${_index.length}건`);
+      return;
+    }
+    setStatus('⏳ 불러오는 중...');
+
+    const diaryPaths = (tree.tree || [])
+      .filter(t => t.type === 'blob' && /^diary\/.*\.md$/.test(t.path))
+      .map(t => t.path);
+
+    const items = [];
+    // 2) 각 diary md
+    await Promise.all(diaryPaths.map(async path => {
+      try {
+        const u = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${path}?ref=${REF}`;
+        const r = await fetch(u, { headers: ghHeaders() });
+        if (!r.ok) return;
+        const d = await r.json();
+        const text = decodeContent(d.content);
+        const dm = path.match(/(\d{4}-\d{2}-\d{2})\.md$/);
+        extractLines(text, dm ? dm[1] : '', items);
+      } catch (e) { /* 이 파일만 스킵 */ }
+    }));
+
+    // 3) places.json
+    try {
+      const pu = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/places.json?ref=${REF}`;
+      const pr = await fetch(pu, { headers: ghHeaders() });
+      if (pr.ok) {
+        const pd = await pr.json();
+        const places = (JSON.parse(decodeContent(pd.content)).places) || {};
+        Object.entries(places).forEach(([name, p]) => {
+          items.push({
+            date: (p.created_at || '').slice(0, 10),
+            time: '',
+            text: `📍 ${name}${p.cat ? ' · ' + p.cat : ''}`,
+            kind: 'place'
+          });
+        });
+      }
+    } catch (e) { /* 장소 없으면 스킵 */ }
+
+    _index = items;
+    localStorage.setItem(INDEX_KEY, JSON.stringify({ sha, items, built_at: Date.now() }));
+    setStatus(`준비됨 · ${items.length}건`);
+    if (force) showResult(`✅ 새로고침 완료 · ${items.length}건`, true);
+  } catch (e) {
+    setStatus('오류');
+    if (!_index.length) showResult(`❌ 오류: ${e.message}`, false);
+  }
+}
+
+function safeParse(s) { try { return JSON.parse(s); } catch (e) { return null; } }
+
+// ── 검색 (단순 키워드 AND) ─────────────────────────────────
+const STOP = new Set(['언제','어디','어디서','어디에','뭐','무엇','몇','누구','왜','어떻게','했어','했나','한','하는','거','수','좀','그','저','이','것','있어','있나','있었','간','갔어','갔나','갔었','나','내','더','때','날','적','또']);
+
+function tokenize(q) {
+  const raw = q.toLowerCase().replace(/[?!.,~/()\[\]"']/g, ' ').split(/\s+/).map(t => t.trim()).filter(Boolean);
+  const meaningful = raw.filter(t => !STOP.has(t));
+  return meaningful.length ? meaningful : raw;   // 전부 불용어면 원본 사용
+}
+
+function searchWith(tokens) {
+  const byDate = (a, b) => (b.date + ' ' + b.time).localeCompare(a.date + ' ' + a.time);
+  // 1차: 모든 단어 포함(AND) — 정확
+  let matched = _index.filter(it => { const h = it.text.toLowerCase(); return tokens.every(t => h.includes(t)); });
+  let broadened = false;
+  // 2차: AND 결과 없고 단어가 여러 개면 하나라도 포함(OR)으로 확장 — 문장 질문 대응
+  if (!matched.length && tokens.length > 1) {
+    matched = _index.filter(it => { const h = it.text.toLowerCase(); return tokens.some(t => h.includes(t)); });
+    broadened = true;
+  }
+  matched.sort(byDate);
+  return { items: matched.slice(0, 50), broadened };
+}
+
+// ── 챗봇 UI ───────────────────────────────────────────────
+function escapeHtml(s) {
+  return s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+}
+function highlight(text, tokens) {
+  let h = escapeHtml(text);
+  tokens.forEach(t => {
+    if (!t) return;
+    const re = new RegExp('(' + t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    h = h.replace(re, '<mark>$1</mark>');
+  });
+  return h;
+}
+function scrollBottom() {
+  const log = document.getElementById('chatLog');
+  log.scrollTop = log.scrollHeight;
+}
+function addUserText(txt) {
+  const div = document.createElement('div');
+  div.className = 'bubble user';
+  div.textContent = txt;
+  document.getElementById('chatLog').appendChild(div);
+  scrollBottom();
+}
+function addBotText(txt) {
+  const div = document.createElement('div');
+  div.className = 'bubble bot';
+  div.textContent = txt;
+  document.getElementById('chatLog').appendChild(div);
+  scrollBottom();
+}
+function renderResults(matched, tokens) {
+  if (!matched.length) { addBotText('해당 기록이 없어요. 다른 단어로 검색해 보세요.'); return; }
+  const wrap = document.createElement('div');
+  wrap.className = 'bubble bot';
+  const head = document.createElement('div');
+  head.style.cssText = 'font-size:12px;color:var(--text2);margin-bottom:2px;';
+  head.textContent = `기록 ${matched.length}건`;
+  wrap.appendChild(head);
+  matched.forEach(it => {
+    const row = document.createElement('div');
+    row.className = 'result-item';
+    if (it.date) row.addEventListener('click', () => { location.href = `index.html?date=${it.date}`; });
+    const meta = document.createElement('div');
+    meta.className = 'result-meta';
+    meta.textContent = (it.date || '-') + (it.time ? ' · ' + it.time : '');
+    const txt = document.createElement('div');
+    txt.className = 'result-text';
+    txt.innerHTML = highlight(it.text, tokens);
+    row.appendChild(meta);
+    row.appendChild(txt);
+    wrap.appendChild(row);
+  });
+  document.getElementById('chatLog').appendChild(wrap);
+  scrollBottom();
+}
+
+function onSend() {
+  const inp = document.getElementById('chatInput');
+  const q = inp.value.trim();
+  if (!q) return;
+  addUserText(q);
+  inp.value = '';
+  if (!getToken()) { addBotText('먼저 GitHub 토큰을 저장해 주세요.'); checkToken(); return; }
+  if (!_index.length) { addBotText('아직 기록을 불러오지 못했어요. 🔄 새로고침을 눌러주세요.'); return; }
+  const tokens = tokenize(q);
+  const { items, broadened } = searchWith(tokens);
+  if (broadened && items.length) addBotText('정확히 일치하는 게 없어 관련 기록으로 넓혀서 찾았어요.');
+  renderResults(items, tokens);
+}
+
+// ── 공통 토스트 ───────────────────────────────────────────
+let _resultTimer = null;
+function showResult(msg, ok) {
+  const el = document.getElementById('result');
+  el.textContent = msg;
+  el.className = ok ? 'ok' : 'err';
+  el.style.display = 'block';
+  clearTimeout(_resultTimer);
+  _resultTimer = setTimeout(() => { el.style.display = 'none'; }, 3500);
+}
+
+// ── 초기화 ────────────────────────────────────────────────
+document.body.dataset.theme = localStorage.getItem('jarvis_theme_v2') || 'concierge';
+addBotText('안녕하세요 사장님 🔎 기록에서 찾아드릴게요. 핵심 단어로 검색하세요. (예: 신혜식당, 당구, 창고)');
+if (getToken()) buildIndex(false); else checkToken();
+</script>
+</body>
+</html>
