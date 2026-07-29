@@ -1,0 +1,1 @@
+- 2026-07-29 | chatbot.html(기록검색) 독립검증 - Git Trees API/캐시/정규식/XSS 대조 확인 | 모델: sonnet(감사), opus(실행-과다) | 낭비: 있음(단순 신규 페이지+검색 로직에 opus는 과함, sonnet으로 충분)
