@@ -73,9 +73,20 @@
   <div class="header">
     <div class="brand"><span>🔎</span><span>기록 검색</span></div>
     <div style="display:flex;gap:6px;">
+      <button class="icon-btn" onclick="toggleAiSettings()">🤖 AI 설정</button>
       <button class="icon-btn" onclick="buildIndex(true)">🔄 새로고침</button>
       <a class="icon-btn" href="index.html">← 돌아가기</a>
     </div>
+  </div>
+
+  <!-- AI 설정 패널 -->
+  <div class="token-banner" id="aiSettings" style="display:none;">
+    <strong>🤖 대화 AI 연결 (선택)</strong> — 키를 넣으면 검색 결과를 근거로 자연스럽게 답해줘요. 비워두면 키워드 검색만 동작해요.
+    <div style="font-size:11px;color:var(--text2);margin-top:6px;">기본값은 Gemini 무료 키(OpenAI 호환) 기준이에요. <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener" style="color:var(--accent);">무료 키 발급</a></div>
+    <input type="text" id="aiEndpointInput" placeholder="API 주소" style="margin-top:8px;">
+    <input type="password" id="aiKeyInput" placeholder="API 키">
+    <input type="text" id="aiModelInput" placeholder="모델명">
+    <button onclick="saveAiSettings()">저장</button>
   </div>
 
   <!-- 토큰 배너 -->
@@ -97,7 +108,7 @@
 
   <div id="result"></div>
 
-  <div class="footer">기록 검색 · 일지·장소에서 키워드로 찾기</div>
+  <div class="footer">기록 검색 · 키워드 검색 + (선택) AI 대화</div>
 </div>
 
 <script>
@@ -226,6 +237,73 @@ async function buildIndex(force) {
 
 function safeParse(s) { try { return JSON.parse(s); } catch (e) { return null; } }
 
+// ── 대화 AI 설정 (OpenAI 호환 API — 기본값 Gemini 무료) ──────────
+const AI_DEFAULT_ENDPOINT = 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions';
+const AI_DEFAULT_MODEL    = 'gemini-2.0-flash';
+
+function getAiSettings() {
+  return {
+    endpoint: localStorage.getItem('jarvis_ai_endpoint') || AI_DEFAULT_ENDPOINT,
+    key: localStorage.getItem('jarvis_ai_key') || '',
+    model: localStorage.getItem('jarvis_ai_model') || AI_DEFAULT_MODEL,
+  };
+}
+function toggleAiSettings() {
+  const el = document.getElementById('aiSettings');
+  const show = el.style.display === 'none';
+  el.style.display = show ? 'block' : 'none';
+  if (show) {
+    const s = getAiSettings();
+    document.getElementById('aiEndpointInput').value = s.endpoint;
+    document.getElementById('aiKeyInput').value = localStorage.getItem('jarvis_ai_key') || '';
+    document.getElementById('aiModelInput').value = s.model;
+  }
+}
+function saveAiSettings() {
+  const endpoint = document.getElementById('aiEndpointInput').value.trim() || AI_DEFAULT_ENDPOINT;
+  const key = document.getElementById('aiKeyInput').value.trim();
+  const model = document.getElementById('aiModelInput').value.trim() || AI_DEFAULT_MODEL;
+  localStorage.setItem('jarvis_ai_endpoint', endpoint);
+  localStorage.setItem('jarvis_ai_key', key);
+  localStorage.setItem('jarvis_ai_model', model);
+  document.getElementById('aiSettings').style.display = 'none';
+  showResult(key ? '✅ AI 연결 저장됨 — 이제 대화로 답해드려요.' : '✅ 저장됨 (키 없음 — 검색만 동작해요)', true);
+}
+
+// 검색된 기록을 근거로 자연어 답변 생성. 실패 시 { ok:false, error } 반환.
+async function callAI(question, items) {
+  const s = getAiSettings();
+  const context = items.slice(0, 15)
+    .map(it => `- ${it.date}${it.time ? ' ' + it.time : ''} ${it.text}`)
+    .join('\n');
+  const systemPrompt = '당신은 사용자의 개인 기록(자비스 일지) 비서입니다. 아래 [관련 기록]에 있는 내용만 근거로 자연스럽고 간결한 한국어로 답변하세요. 기록에 없는 내용은 추측하지 말고 모른다고 답하세요.\n\n[관련 기록]\n' + context;
+  try {
+    const res = await fetch(s.endpoint, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${s.key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: s.model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: question },
+        ],
+      }),
+    });
+    const data = await res.json().catch(() => null);
+    if (!res.ok) {
+      // Gemini의 OpenAI 호환 엔드포인트는 오류를 배열([{error:{...}}])로 감싸서 줄 때가 있음
+      const errObj = Array.isArray(data) ? data[0] : data;
+      const msg = errObj && errObj.error && errObj.error.message ? errObj.error.message : `HTTP ${res.status}`;
+      return { ok: false, error: msg };
+    }
+    const text = data && data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content;
+    if (!text) return { ok: false, error: '빈 응답' };
+    return { ok: true, text: text.trim() };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
 // ── 검색 (단순 키워드 AND) ─────────────────────────────────
 const STOP = new Set(['언제','어디','어디서','어디에','뭐','무엇','몇','누구','왜','어떻게','했어','했나','한','하는','거','수','좀','그','저','이','것','있어','있나','있었','간','갔어','갔나','갔었','나','내','더','때','날','적','또']);
 
@@ -280,13 +358,13 @@ function addBotText(txt) {
   document.getElementById('chatLog').appendChild(div);
   scrollBottom();
 }
-function renderResults(matched, tokens) {
+function renderResults(matched, tokens, isReference) {
   if (!matched.length) { addBotText('해당 기록이 없어요. 다른 단어로 검색해 보세요.'); return; }
   const wrap = document.createElement('div');
   wrap.className = 'bubble bot';
   const head = document.createElement('div');
   head.style.cssText = 'font-size:12px;color:var(--text2);margin-bottom:2px;';
-  head.textContent = `기록 ${matched.length}건`;
+  head.textContent = isReference ? `참고한 기록 ${matched.length}건` : `기록 ${matched.length}건`;
   wrap.appendChild(head);
   matched.forEach(it => {
     const row = document.createElement('div');
@@ -306,7 +384,7 @@ function renderResults(matched, tokens) {
   scrollBottom();
 }
 
-function onSend() {
+async function onSend() {
   const inp = document.getElementById('chatInput');
   const q = inp.value.trim();
   if (!q) return;
@@ -316,8 +394,23 @@ function onSend() {
   if (!_index.length) { addBotText('아직 기록을 불러오지 못했어요. 🔄 새로고침을 눌러주세요.'); return; }
   const tokens = tokenize(q);
   const { items, broadened } = searchWith(tokens);
-  if (broadened && items.length) addBotText('정확히 일치하는 게 없어 관련 기록으로 넓혀서 찾았어요.');
+
+  if (getAiSettings().key && items.length) {
+    addBotText('⏳ 생각 중...');
+    const ai = await callAI(q, items);
+    removeLastBotText();
+    if (ai.ok) { addBotText(ai.text); renderResults(items, tokens, true); return; }
+    addBotText(`⚠️ AI 응답 실패(${ai.error}) — 검색 결과만 보여드릴게요.`);
+  } else if (broadened && items.length) {
+    addBotText('정확히 일치하는 게 없어 관련 기록으로 넓혀서 찾았어요.');
+  }
   renderResults(items, tokens);
+}
+
+function removeLastBotText() {
+  const log = document.getElementById('chatLog');
+  const last = log.lastElementChild;
+  if (last && last.classList.contains('bot')) log.removeChild(last);
 }
 
 // ── 공통 토스트 ───────────────────────────────────────────
@@ -333,7 +426,9 @@ function showResult(msg, ok) {
 
 // ── 초기화 ────────────────────────────────────────────────
 document.body.dataset.theme = localStorage.getItem('jarvis_theme_v2') || 'concierge';
-addBotText('안녕하세요 사장님 🔎 기록에서 찾아드릴게요. 핵심 단어로 검색하세요. (예: 신혜식당, 당구, 창고)');
+addBotText(getAiSettings().key
+  ? '안녕하세요 사장님 🔎 기록을 바탕으로 대화해드려요. 편하게 물어보세요. (예: 지난주에 뭐 먹었어?)'
+  : '안녕하세요 사장님 🔎 기록에서 찾아드릴게요. 핵심 단어로 검색하세요. (예: 신혜식당, 당구, 창고) · 🤖 AI 설정에 키를 넣으면 대화형으로도 답해드려요.');
 if (getToken()) buildIndex(false); else checkToken();
 </script>
 </body>
