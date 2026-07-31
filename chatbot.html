@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>기록 검색 · 자비스 기록</title>
+  <title>기록 챗봇 · 자비스 기록</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
@@ -45,16 +45,21 @@
     .send-btn:active{opacity:.85;}
     body[data-theme="hud"] .send-btn{font-family:var(--mono);letter-spacing:1px;}
 
-    /* 챗봇 */
+    /* 챗봇 — 카카오톡 스타일 */
     #idxStatus{float:right;font-size:11px;color:var(--text2);font-weight:400;text-transform:none;letter-spacing:0;font-family:var(--mono);}
-    .chat-log{max-height:56vh;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:4px 2px 10px;margin-bottom:10px;}
-    .bubble{max-width:92%;padding:10px 12px;border-radius:14px;font-size:14px;line-height:1.5;word-break:break-word;}
-    .bubble.user{align-self:flex-end;background:var(--btn-bg);color:var(--btn-text);border-bottom-right-radius:4px;}
-    .bubble.bot{align-self:flex-start;background:var(--meta-bg);color:var(--text);border-bottom-left-radius:4px;}
-    .result-item{display:flex;flex-direction:column;gap:2px;padding:8px 10px;margin-top:6px;background:var(--card);border:1px solid var(--border);border-radius:var(--input-radius);cursor:pointer;}
+    .chat-log{max-height:56vh;overflow-y:auto;display:flex;flex-direction:column;gap:10px;padding:12px 8px;margin-bottom:10px;background:#b2c7da;border-radius:var(--input-radius);}
+    .bubble-row{display:flex;align-items:flex-end;gap:6px;max-width:100%;}
+    .bubble-row.user{align-self:flex-end;flex-direction:row-reverse;}
+    .bubble-row.bot{align-self:flex-start;}
+    .avatar{flex:0 0 auto;width:32px;height:32px;border-radius:50%;background:#ffe14d;display:flex;align-items:center;justify-content:center;font-size:16px;box-shadow:0 1px 2px rgba(0,0,0,0.15);}
+    .bubble-time{flex:0 0 auto;font-size:10px;color:#4a4a4a;white-space:nowrap;padding-bottom:2px;}
+    .bubble{max-width:220px;padding:9px 12px;font-size:14px;line-height:1.5;word-break:break-word;box-shadow:0 1px 1px rgba(0,0,0,0.08);}
+    .bubble.user{background:#fee500;color:#3c1e1e;border-radius:15px 3px 15px 15px;}
+    .bubble.bot{background:#ffffff;color:#222;border-radius:3px 15px 15px 15px;}
+    .result-item{display:flex;flex-direction:column;gap:2px;padding:8px 10px;margin-top:6px;background:#f7f8fa;border:1px solid #e3e6ea;border-radius:10px;cursor:pointer;}
     .result-item:active{opacity:.8;}
-    .result-meta{font-size:11px;color:var(--text2);font-family:var(--mono);}
-    .result-text{font-size:13px;color:var(--text);}
+    .result-meta{font-size:11px;color:#8a8a8a;font-family:var(--mono);}
+    .result-text{font-size:13px;color:#222;}
     mark{background:var(--accent);color:var(--btn-text);border-radius:3px;padding:0 2px;}
 
     /* 결과 토스트 */
@@ -71,7 +76,7 @@
 
   <!-- 헤더 -->
   <div class="header">
-    <div class="brand"><span>🔎</span><span>기록 검색</span></div>
+    <div class="brand"><span>🔎</span><span>기록 챗봇</span></div>
     <div style="display:flex;gap:6px;">
       <button class="icon-btn" onclick="toggleAiSettings()">🤖 AI 설정</button>
       <button class="icon-btn" onclick="buildIndex(true)">🔄 새로고침</button>
@@ -99,24 +104,40 @@
 
   <!-- 챗봇 -->
   <div class="card">
-    <h2>🔎 기록 검색 <span id="idxStatus"></span></h2>
+    <h2>🔎 기록 챗봇 <span id="idxStatus"></span></h2>
     <div id="chatLog" class="chat-log"></div>
     <div class="row" style="margin-bottom:0;">
-      <input type="text" id="chatInput" placeholder="검색어 (예: 신혜식당, 당구, 창고)" onkeydown="if(event.key==='Enter')onSend()">
-      <button class="send-btn" style="width:auto;padding:12px 18px;" onclick="onSend()">검색</button>
+      <input type="text" id="chatInput" placeholder="문장으로 적어보세요 (예: 신혜식당 갔다옴 / 보고서 끝냄 / 신혜식당 언제 갔어?)" onkeydown="if(event.key==='Enter')onSend()">
+      <button class="send-btn" style="width:auto;padding:12px 18px;" onclick="onSend()">전송</button>
     </div>
   </div>
 
   <div id="result"></div>
 
-  <div class="footer">기록 검색 · 키워드 검색 + (선택) AI 대화</div>
+  <div class="footer">기록 챗봇 · 키워드 검색 + (선택) AI 대화</div>
 </div>
 
 <script>
 const REPO_OWNER = 'yamugyclaude';
 const REPO_NAME  = 'jarvis-web';
 const REF        = 'data';
+const WORKFLOW   = 'location-log.yml';
+const API_URL    = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/actions/workflows/${WORKFLOW}/dispatches`;
 const INDEX_KEY  = 'jarvis_search_index_v3';
+
+// ── 기록 전송 (index.html/vehicle.html과 동일 패턴) ────────────
+async function dispatch(inputs) {
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Authorization': `token ${getToken().replace(/[^\x20-\x7E]/g, '')}`, 'Accept': 'application/vnd.github+json' },
+      body: JSON.stringify({ ref: REF, inputs }),
+    });
+    return res.status === 204 || res.ok;
+  } catch (e) {
+    return false;
+  }
+}
 
 // ── 토큰 ──────────────────────────────────────────────────
 function getToken() { return localStorage.getItem('jarvis_gh_token') || ''; }
@@ -140,6 +161,8 @@ function ghHeaders() {
 // ── 검색 인덱스 (일지 + 장소) ──────────────────────────────
 // 항목: { date:'YYYY-MM-DD', time:'HH:MM', text, kind:'diary'|'log'|'place' }
 let _index = [];
+// 저장된 장소 DB: { 이름: {cat, lat, lng, created_at} } — 자연어 장소기록 라우팅에 사용
+let _placeDB = {};
 
 function setStatus(msg) { document.getElementById('idxStatus').textContent = msg; }
 
@@ -239,6 +262,7 @@ async function buildIndex(force) {
       if (pr.ok) {
         const pd = await pr.json();
         const places = (JSON.parse(decodeContent(pd.content)).places) || {};
+        _placeDB = places;
         Object.entries(places).forEach(([name, p]) => {
           items.push({
             date: (p.created_at || '').slice(0, 10),
@@ -369,26 +393,50 @@ function scrollBottom() {
   const log = document.getElementById('chatLog');
   log.scrollTop = log.scrollHeight;
 }
+function nowHHMM() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+function addBubbleRow(side, bubbleEl) {
+  const row = document.createElement('div');
+  row.className = 'bubble-row ' + side;
+  const time = document.createElement('div');
+  time.className = 'bubble-time';
+  time.textContent = nowHHMM();
+  if (side === 'bot') {
+    const avatar = document.createElement('div');
+    avatar.className = 'avatar';
+    avatar.textContent = '🔎';
+    row.appendChild(avatar);
+    row.appendChild(bubbleEl);
+    row.appendChild(time);
+  } else {
+    row.appendChild(bubbleEl);
+    row.appendChild(time);
+  }
+  document.getElementById('chatLog').appendChild(row);
+  scrollBottom();
+  return row;
+}
 function addUserText(txt) {
   const div = document.createElement('div');
   div.className = 'bubble user';
   div.textContent = txt;
-  document.getElementById('chatLog').appendChild(div);
-  scrollBottom();
+  addBubbleRow('user', div);
 }
 function addBotText(txt) {
   const div = document.createElement('div');
   div.className = 'bubble bot';
   div.textContent = txt;
-  document.getElementById('chatLog').appendChild(div);
-  scrollBottom();
+  addBubbleRow('bot', div);
 }
 function renderResults(matched, tokens, isReference) {
   if (!matched.length) { addBotText('해당 기록이 없어요. 다른 단어로 검색해 보세요.'); return; }
   const wrap = document.createElement('div');
   wrap.className = 'bubble bot';
+  wrap.style.maxWidth = '260px';
   const head = document.createElement('div');
-  head.style.cssText = 'font-size:12px;color:var(--text2);margin-bottom:2px;';
+  head.style.cssText = 'font-size:12px;color:#8a8a8a;margin-bottom:2px;';
   head.textContent = isReference ? `참고한 기록 ${matched.length}건` : `기록 ${matched.length}건`;
   wrap.appendChild(head);
   matched.forEach(it => {
@@ -405,18 +453,57 @@ function renderResults(matched, tokens, isReference) {
     row.appendChild(txt);
     wrap.appendChild(row);
   });
-  document.getElementById('chatLog').appendChild(wrap);
-  scrollBottom();
+  addBubbleRow('bot', wrap);
 }
 
-async function onSend() {
-  const inp = document.getElementById('chatInput');
-  const q = inp.value.trim();
-  if (!q) return;
-  addUserText(q);
-  inp.value = '';
-  if (!getToken()) { addBotText('먼저 GitHub 토큰을 저장해 주세요.'); checkToken(); return; }
-  if (!_index.length) { addBotText('아직 기록을 불러오지 못했어요. 🔄 새로고침을 눌러주세요.'); return; }
+// ── 자연어 자동기록 라우팅 (검색/장소방문/메모 3갈래) ──────────
+const QUESTION_MARKERS = ['?', '？', '언제', '몇시', '며칠', '어디', '뭐', '무엇', '누구', '왜', '어떻게', '있었', '있나'];
+
+function looksLikeQuestion(t) {
+  return QUESTION_MARKERS.some(m => t.includes(m));
+}
+
+// 문장 안에 저장된 장소명이 있는지 찾는다. 1글자 이름은 오탐 위험이 커서 제외.
+// 이름 뒤에 조사·동사·문장끝이 와야 인정 (예: "집중"의 "집"은 불인정, "집에"·"창고 갔다"는 인정)
+function findKnownPlaceInText(t) {
+  const names = Object.keys(_placeDB).filter(n => n.length >= 2);
+  return names.find(name => {
+    const idx = t.indexOf(name);
+    if (idx === -1) return false;
+    const after = t.slice(idx + name.length);
+    return after === '' || /^\s/.test(after) || /^[.,!?~]/.test(after) ||
+      /^(에서|으로|까지|에|도|는|은|을|를|만|갔|왔|도착|다녀|들렀)/.test(after);
+  });
+}
+
+function classifyIntent(q) {
+  if (looksLikeQuestion(q)) return { type: 'search' };
+  const place = findKnownPlaceInText(q);
+  if (place) return { type: 'place', place };
+  return { type: 'memo' };
+}
+
+async function handlePlaceLog(name) {
+  const p = _placeDB[name] || {};
+  const inputs = { place: name };
+  if (typeof p.lat === 'number' && typeof p.lng === 'number') {
+    inputs.lat = String(p.lat);
+    inputs.lng = String(p.lng);
+  }
+  addBotText('⏳ 기록 중...');
+  const ok = await dispatch(inputs);
+  removeLastBotText();
+  addBotText(ok ? `✅ "${name}" 방문으로 기록했어요.` : '⚠️ 기록 전송에 실패했어요. 네트워크나 토큰을 확인해 주세요.');
+}
+
+async function handleMemoLog(text) {
+  addBotText('⏳ 기록 중...');
+  const ok = await dispatch({ note: text, section: 'memo' });
+  removeLastBotText();
+  addBotText(ok ? `✅ 메모로 기록했어요: "${text}"` : '⚠️ 기록 전송에 실패했어요. 네트워크나 토큰을 확인해 주세요.');
+}
+
+async function handleSearch(q) {
   const tokens = tokenize(q);
   const { items, broadened } = searchWith(tokens);
 
@@ -430,6 +517,21 @@ async function onSend() {
     addBotText('정확히 일치하는 게 없어 관련 기록으로 넓혀서 찾았어요.');
   }
   renderResults(items, tokens);
+}
+
+async function onSend() {
+  const inp = document.getElementById('chatInput');
+  const q = inp.value.trim();
+  if (!q) return;
+  addUserText(q);
+  inp.value = '';
+  if (!getToken()) { addBotText('먼저 GitHub 토큰을 저장해 주세요.'); checkToken(); return; }
+  if (!_index.length) { addBotText('아직 기록을 불러오지 못했어요. 🔄 새로고침을 눌러주세요.'); return; }
+
+  const intent = classifyIntent(q);
+  if (intent.type === 'place') { await handlePlaceLog(intent.place); return; }
+  if (intent.type === 'memo') { await handleMemoLog(q); return; }
+  await handleSearch(q);
 }
 
 function removeLastBotText() {
@@ -451,10 +553,24 @@ function showResult(msg, ok) {
 
 // ── 초기화 ────────────────────────────────────────────────
 document.body.dataset.theme = localStorage.getItem('jarvis_theme_v2') || 'concierge';
-addBotText(getAiSettings().key
-  ? '안녕하세요 사장님 🔎 기록을 바탕으로 대화해드려요. 편하게 물어보세요. (예: 지난주에 뭐 먹었어?)'
-  : '안녕하세요 사장님 🔎 기록에서 찾아드릴게요. 핵심 단어로 검색하세요. (예: 신혜식당, 당구, 창고) · 🤖 AI 설정에 키를 넣으면 대화형으로도 답해드려요.');
-if (getToken()) buildIndex(false); else checkToken();
+addBotText('안녕하세요 사장님 📝 문장으로 편하게 적어주세요 — "신혜식당 갔다옴"처럼 쓰면 자동으로 기록하고, "신혜식당 언제 갔어?"처럼 물어보면 찾아드려요.'
+  + (getAiSettings().key ? '' : ' · 🤖 AI 설정에 키를 넣으면 검색도 대화형으로 답해드려요.'));
+
+// URL로 들어온 문장 처리 (예: iOS 단축어에서 chatbot.html?q=문장&auto=1 로 열기)
+const _urlParams = new URLSearchParams(location.search);
+const _urlQuery = _urlParams.get('q');
+const _urlAuto = _urlParams.get('auto') === '1';
+if (_urlQuery) {
+  document.getElementById('chatInput').value = _urlQuery;
+  history.replaceState(null, '', location.pathname); // 새로고침 시 중복 자동전송 방지
+}
+
+if (getToken()) {
+  buildIndex(false).then(() => { if (_urlQuery && _urlAuto) onSend(); });
+} else {
+  checkToken();
+  if (_urlQuery) addBotText('먼저 GitHub 토큰을 저장한 뒤 다시 시도해 주세요.');
+}
 </script>
 </body>
 </html>
