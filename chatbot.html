@@ -38,8 +38,8 @@
     .icon-btn:active,.icon-btn:hover{border-color:var(--cyan);box-shadow:var(--glow-soft);}
 
     /* 카드 (각진 HUD 패널 + 코너 브라켓) */
-    .card{background:var(--panel);backdrop-filter:blur(10px);border:1px solid var(--cyan-dim);border-radius:6px;padding:16px;margin-bottom:14px;position:relative;z-index:2;}
-    .card::before,.card::after{content:'';position:absolute;width:14px;height:14px;border:2px solid var(--cyan);opacity:.85;}
+    .card{background:var(--panel);backdrop-filter:blur(10px);border-radius:6px;padding:16px;margin-bottom:14px;position:relative;z-index:2;}
+    .card::before,.card::after{content:'';position:absolute;width:18px;height:18px;border:2px solid var(--cyan);opacity:.9;}
     .card::before{top:-1px;left:-1px;border-right:none;border-bottom:none;}
     .card::after{bottom:-1px;right:-1px;border-left:none;border-top:none;}
     h2{font-size:11px;font-weight:700;color:var(--cyan);text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;font-family:var(--hud-font);}
@@ -68,7 +68,7 @@
       background:
         repeating-linear-gradient(0deg, rgba(46,230,255,0.025) 0px, rgba(46,230,255,0.025) 1px, transparent 1px, transparent 3px),
         var(--void);
-      border:1px solid var(--cyan-dim);border-radius:4px;}
+      border-radius:4px;}
     .bubble-row{display:flex;align-items:flex-end;gap:8px;max-width:100%;}
     .bubble-row.user{align-self:flex-end;flex-direction:row-reverse;}
     .bubble-row.bot{align-self:flex-start;}
