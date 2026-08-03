@@ -319,6 +319,18 @@
   </div>
 </div>
 
+<!-- 식당 점심/저녁 선택 팝업 -->
+<div class="overlay" id="mealOverlay">
+  <div class="popup">
+    <div class="popup-title">🍴 식당 기록 — 점심? 저녁?</div>
+    <div class="popup-text" id="mealPlaceText"></div>
+    <div class="popup-btns">
+      <button class="btn-cancel" onclick="selectMeal('lunch')">점심 식사</button>
+      <button class="btn-confirm" onclick="selectMeal('dinner')">저녁 식사</button>
+    </div>
+  </div>
+</div>
+
 <!-- 지도 팝업 -->
 <div class="overlay" id="mapOverlay">
   <div class="popup" style="max-width:560px;width:94%;padding:14px;">
@@ -782,8 +794,12 @@ async function sendPlace() {
     const gps = await getGPS();
     const inputs = { place };
     if (gps) { inputs.lat = String(gps.lat); inputs.lng = String(gps.lng); }
-    dispatch(inputs);
     document.getElementById('placeInput').value = '';
+    if ((db[place].cat || '') === '식당') {
+      askMealTime(place, inputs);
+    } else {
+      dispatch(inputs);
+    }
   } else {
     // 신규 장소 → 카테고리 팝업
     _pendingPlace = place;
@@ -855,13 +871,38 @@ async function confirmCategory() {
   savePlaceDB(db);
   const inputs = { place, category: cat };
   if (coord) { inputs.lat = String(coord.lat); inputs.lng = String(coord.lng); }
-  dispatch(inputs);
   document.getElementById('placeInput').value = '';
+  if (cat === '식당') {
+    askMealTime(place, inputs);
+  } else {
+    dispatch(inputs);
+  }
+}
+
+// ── 식당 점심/저녁 선택 팝업 ──────────────────────────────
+let _pendingMealInputs = null;
+function askMealTime(place, inputs) {
+  _pendingMealInputs = inputs;
+  document.getElementById('mealPlaceText').textContent = place;
+  document.getElementById('mealOverlay').classList.add('show');
+}
+function selectMeal(meal) {
+  document.getElementById('mealOverlay').classList.remove('show');
+  if (!_pendingMealInputs) return;
+  _pendingMealInputs.meal = meal;
+  dispatch(_pendingMealInputs);
+  _pendingMealInputs = null;
 }
 
 // 클릭 바깥 → 닫기
 document.getElementById('catOverlay').addEventListener('click', e => {
   if (e.target === document.getElementById('catOverlay')) closeCatPopup();
+});
+document.getElementById('mealOverlay').addEventListener('click', e => {
+  if (e.target === document.getElementById('mealOverlay')) {
+    document.getElementById('mealOverlay').classList.remove('show');
+    _pendingMealInputs = null;
+  }
 });
 
 // ── 장소 자동완성 / 목록 드롭다운 ────────────────────────────────
