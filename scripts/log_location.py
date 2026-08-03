@@ -12,6 +12,7 @@ lng = os.environ.get("LNG", "")
 note = os.environ.get("NOTE", "")
 section = os.environ.get("SECTION", "memo")
 category = os.environ.get("CATEGORY", "")
+meal = os.environ.get("MEAL", "")
 organize = os.environ.get("ORGANIZE", "")
 vehicle = os.environ.get("VEHICLE", "")
 liters = os.environ.get("LITERS", "")
@@ -151,7 +152,9 @@ if note:
 # ── 임시 장소 기록 (PLACE가 있을 때) ──────────────────────
 elif place:
     coord_str = f" ({float(lat):.5f}, {float(lng):.5f})" if lat and lng else ""
-    log_line = f"\n> 📍 {current_time} — {place} 도착{coord_str}\n"
+    meal_labels = {"lunch": "점심 식사", "dinner": "저녁 식사"}
+    meal_str = f" ({meal_labels[meal]})" if meal in meal_labels else ""
+    log_line = f"\n> 📍 {current_time} — {place} 도착{meal_str}{coord_str}\n"
     lines.append(log_line)
 
     with open(diary_path, "w", encoding="utf-8") as f:

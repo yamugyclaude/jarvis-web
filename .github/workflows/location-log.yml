@@ -30,6 +30,9 @@ on:
       category:
         description: '장소 카테고리 (예: 식당, 카페 등)'
         required: false
+      meal:
+        description: '식사 구분 (lunch / dinner)'
+        required: false
       organize:
         description: '오늘 일지 자동 정리 (true)'
         required: false
@@ -68,6 +71,7 @@ jobs:
           NOTE: ${{ github.event.inputs.note }}
           SECTION: ${{ github.event.inputs.section }}
           CATEGORY: ${{ github.event.inputs.category }}
+          MEAL: ${{ github.event.inputs.meal }}
           ORGANIZE: ${{ github.event.inputs.organize }}
           VEHICLE: ${{ github.event.inputs.vehicle }}
           LITERS: ${{ github.event.inputs.liters }}
