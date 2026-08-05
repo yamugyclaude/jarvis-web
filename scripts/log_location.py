@@ -112,7 +112,8 @@ with open(diary_path, "r", encoding="utf-8") as f:
     lines = f.readlines()
 
 # ── 일과 메모 기록 (NOTE가 있을 때) ──────────────────────
-if note:
+def record_note():
+    global lines, section
     if section == "memo":
         section = auto_classify(note, current_time)
     header = section_headers.get(section, section_headers["memo"])
@@ -146,8 +147,12 @@ if note:
         f.writelines(lines)
 
     section_label = header.replace("## ", "")
-    summary = f"✅ [{section_label}] {note} ({current_time})"
     print(f"✅ 기록 완료: {today} | {section_label}: {note}")
+    return section_label
+
+if note and not place:
+    section_label = record_note()
+    summary = f"✅ [{section_label}] {note} ({current_time})"
 
 # ── 임시 장소 기록 (PLACE가 있을 때) ──────────────────────
 elif place:
@@ -218,11 +223,34 @@ elif place:
             places_data["places"][place]["lng"] = lng_val
         print(f"✅ 장소 갱신: {place}")
 
+    # place와 함께 note도 왔으면 해당 섹션에 불릿도 기록 (방문이력에 반영하기 전에 섹션 확정)
+    section_label = None
+    if note:
+        with open(diary_path, "r", encoding="utf-8") as f:
+            lines = f.readlines()
+        section_label = record_note()
+
+    # 방문이력 누적
+    p = places_data["places"][place]
+    p["visits"] = p.get("visits", 0) + 1
+    p["last_visit"] = now.isoformat()
+    recent_entry = {
+        "at": now.isoformat(),
+        "section": section if note else None,
+        "note": note if note else None,
+    }
+    recent = p.get("recent", [])
+    recent.append(recent_entry)
+    p["recent"] = recent[-30:]
+
     with open(places_file, "w", encoding="utf-8") as f:
         json.dump(places_data, f, ensure_ascii=False, indent=2)
 
     summary = f"✅ {place} 도착 기록됨 ({current_time})"
     print(f"✅ 기록 완료: {today} | {place} 도착 {current_time}{coord_str}")
+
+    if note:
+        summary += f" / [{section_label}] {note}"
 
 # ── 고정 위치 기록 (LOCATION이 있을 때) ──────────────────────
 elif location:
