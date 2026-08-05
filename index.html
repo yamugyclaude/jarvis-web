@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <!-- Nominatim 검색 요청 식별용 referer 전달 -->
   <meta name="referrer" content="no-referrer-when-downgrade">
-  <title>자비스 기록 v2026.07.15.7</title>
+  <title>자비스 기록 v2026.08.05.1</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.css" rel="stylesheet">
@@ -125,7 +125,7 @@
 
   <!-- 헤더 -->
   <div class="header">
-    <div class="brand"><span>🤖</span><span>자비스 기록</span><span class="ver">v2026.07.15.7</span></div>
+    <div class="brand"><span>🤖</span><span>자비스 기록</span><span class="ver">v2026.08.05.1</span></div>
     <div style="display:flex;align-items:center;gap:8px;">
       <div class="moodbar">
         <button class="mood" data-t="concierge" onclick="setTheme('concierge')">비서</button>
@@ -259,12 +259,26 @@
     <button class="send-btn" style="margin-top:8px;" onclick="recordNote()">기록하기</button>
   </div>
 
-  <!-- 장소 기록 -->
+  <!-- 지금 여기 기록 -->
   <div class="card">
-    <h2>장소 기록</h2>
-    <div id="nearHint" style="display:none;margin-bottom:8px;font-size:13px;cursor:pointer;
-      padding:8px 12px;border:1.5px dashed var(--arrive);border-radius:var(--input-radius);
-      color:var(--arrive);" onclick="acceptNear()"></div>
+    <h2>📍 지금 여기 기록</h2>
+    <div id="hereStatus" style="display:none;margin-bottom:8px;font-size:12px;color:var(--text2);"></div>
+    <div id="hereCandidates" style="display:none;margin-bottom:8px;"></div>
+    <div id="hereNoneHint" style="display:none;margin-bottom:8px;font-size:13px;color:var(--text2);"></div>
+
+    <div id="hereDetail" style="display:none;margin-bottom:10px;padding:10px;
+      border:1.5px solid var(--border);border-radius:var(--input-radius);">
+      <div class="popup-label" id="hereDetailTitle" style="margin-bottom:6px;"></div>
+      <div id="hereMealPick" style="display:none;gap:6px;margin-bottom:8px;"></div>
+      <div class="popup-label" style="margin-bottom:4px;">최근 기록 중 선택 (선택사항):</div>
+      <div id="hereDetailChips" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:8px;"></div>
+      <input type="text" id="hereNoteInput" placeholder="다르게 적기 (비워두면 도착만 기록)..."
+        style="width:100%;margin-bottom:8px;padding:8px 10px;border:1.5px solid var(--border);
+        border-radius:var(--input-radius);font-size:13px;background:var(--card);color:var(--text);font-family:var(--font);">
+      <button class="send-btn" onclick="confirmHereRecord()">기록하기</button>
+      <button class="view-btn" style="width:100%;margin-top:6px;" onclick="cancelHereDetail()">취소</button>
+    </div>
+
     <div class="row" style="position:relative;">
       <input type="text" id="placeInput" placeholder="장소 이름 (예: 신혜식당)" autocomplete="off"
         oninput="onPlaceInput()" onkeydown="onPlaceKey(event)" onfocus="onPlaceFocus()">
@@ -272,7 +286,7 @@
         background:var(--card);border:1.5px solid var(--border);border-radius:var(--input-radius);
         z-index:50;max-height:180px;overflow-y:auto;margin-top:2px;"></div>
     </div>
-    <button class="send-btn" onclick="sendPlace()">장소 기록</button>
+    <button class="send-btn" onclick="sendPlace()">직접 입력해서 기록</button>
     <button class="view-btn" style="width:100%;margin-top:6px;" onclick="openMapPopup()">🗺 지도로 보기</button>
   </div>
 
@@ -296,7 +310,7 @@
 
   <div id="result"></div>
 
-  <div class="footer">v2026.07.29.3 · 조회 / 메모 / 장소 / 검색(AI대화) / 주간요약 · 무드 4종(비서·자비스·조용·애플)</div>
+  <div class="footer">v2026.08.05.1 · 조회 / 메모 / 지금 여기 / 검색(AI대화) / 주간요약 · 무드 4종(비서·자비스·조용·애플)</div>
 </div>
 
 <!-- 장소 카테고리 팝업 -->
@@ -487,6 +501,7 @@ async function loadPlacesFromGitHub() {
     if (parsed && parsed.places) {
       _placeDB = parsed.places;
       localStorage.setItem('jarvis_places', JSON.stringify(_placeDB));
+      initHereCard();
     }
   } catch(e) { /* 오프라인이면 localStorage 캐시 유지 */ }
 }
@@ -756,7 +771,7 @@ function getGPS() {
   return new Promise(resolve => {
     if (!navigator.geolocation) { resolve(null); return; }
     navigator.geolocation.getCurrentPosition(
-      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }),
       ()  => resolve(null),
       { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
     );
@@ -772,16 +787,45 @@ function distM(a, b) {
   return 2 * R * Math.asin(Math.sqrt(x));
 }
 
-// 현재 위치 기준 가장 가까운(반경 내) 저장 장소
-function nearestPlace(gps, radius = 80) {
-  if (!gps) return null;
-  let best = null, bestD = radius;
+// 현재 위치 기준 반경 내 저장 장소 (가까운 순, 최대 limit개)
+function nearestPlaces(gps, radius = 80, limit = 3) {
+  if (!gps) return [];
+  const found = [];
   for (const [name, p] of Object.entries(_placeDB)) {
     if (typeof p.lat !== 'number' || typeof p.lng !== 'number') continue;
     const d = distM(gps, { lat: p.lat, lng: p.lng });
-    if (d <= bestD) { bestD = d; best = { name, dist: Math.round(d) }; }
+    if (d <= radius) found.push({ name, dist: Math.round(d) });
   }
-  return best;
+  found.sort((a, b) => a.dist - b.dist);
+  return found.slice(0, limit);
+}
+
+// 장소의 recentArr(최근 30건)로 이번에 기록할 section을 추천 — DOM 접근 없는 순수 함수.
+// 요일 일치 + 시간대(±2시간) 근접 가중치로 최빈 section 선택, recent 없으면 카테고리 시간대 폴백.
+function suggestSection(recentArr, now, cat) {
+  const guessMeal = h => (h >= 17 || h <= 3) ? 'dinner' : 'lunch';
+  if (!recentArr || !recentArr.length) {
+    return cat === '식당' ? guessMeal(now.getHours()) : 'work';
+  }
+  const nowDay = now.getDay();
+  const nowH = now.getHours() + now.getMinutes() / 60;
+  const scores = {};
+  recentArr.forEach(r => {
+    if (!r || !r.section) return;
+    const d = new Date(r.at);
+    let w = 1;
+    if (!isNaN(d)) {
+      if (d.getDay() === nowDay) w += 2;
+      const h = d.getHours() + d.getMinutes() / 60;
+      const diff = Math.min(Math.abs(h - nowH), 24 - Math.abs(h - nowH));
+      if (diff <= 2) w += 3;
+    }
+    scores[r.section] = (scores[r.section] || 0) + w;
+  });
+  const entries = Object.entries(scores);
+  if (!entries.length) return cat === '식당' ? guessMeal(now.getHours()) : 'work';
+  entries.sort((a, b) => b[1] - a[1]);
+  return entries[0][0];
 }
 
 async function sendPlace() {
@@ -910,9 +954,8 @@ function onPlaceInput() {
   renderPlaceDropdown(document.getElementById('placeInput').value.trim());
 }
 
-// 입력칸 포커스 → 근처 힌트 + 저장된 전체 목록 표시
+// 입력칸 포커스 → 저장된 전체 목록 표시 (근처 후보는 hereCandidates가 자동 처리)
 function onPlaceFocus() {
-  checkNearby();
   renderPlaceDropdown(document.getElementById('placeInput').value.trim());
 }
 
@@ -1027,22 +1070,172 @@ function onPlaceKey(e) {
   if (e.key === 'Escape') { closePlaceDropdown(); }
 }
 
-// 입력칸 포커스 → 현재 위치 근처 저장 장소 제안
-let _nearName = '';
-async function checkNearby() {
-  if (document.getElementById('placeInput').value.trim()) return;
-  const hint = document.getElementById('nearHint');
-  const gps = await getGPS();
-  const near = nearestPlace(gps);
-  if (!near) { hint.style.display = 'none'; _nearName = ''; return; }
-  _nearName = near.name;
-  hint.textContent = `📍 여기 "${near.name}" 이죠? (약 ${near.dist}m) — 눌러서 입력`;
-  hint.style.display = 'block';
+// ── 지금 여기 기록: 자동 근처 감지 + 방문 요약 ────────────────────
+let _hereGPS = null;
+let _hereCandidates = [];
+let _hereActive = null;   // { name, cat, isRestaurant, section, meal, chipItems }
+let _hereDetailOpen = false;
+
+function placeVisitSummary(name) {
+  const p = _placeDB[name];
+  if (!p || !p.visits) return '';
+  if (!p.last_visit) return `방문 ${p.visits}회`;
+  const d = new Date(p.last_visit);
+  if (isNaN(d)) return `방문 ${p.visits}회`;
+  const md = `${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return `최근 ${md} 방문 · ${p.visits}회`;
 }
-function acceptNear() {
-  if (!_nearName) return;
-  document.getElementById('placeInput').value = _nearName;
-  document.getElementById('nearHint').style.display = 'none';
+
+async function initHereCard() {
+  if (_hereDetailOpen) return;
+  const status = document.getElementById('hereStatus');
+  const candBox = document.getElementById('hereCandidates');
+  const noneBox = document.getElementById('hereNoneHint');
+  status.style.display = 'none';
+  candBox.style.display = 'none';
+  noneBox.style.display = 'none';
+
+  const gps = await getGPS();
+  _hereGPS = gps;
+  if (!gps) {
+    status.textContent = '⚠️ 위치 확인 실패 — 아래에서 직접 입력하세요.';
+    status.style.display = 'block';
+    return;
+  }
+  if (gps.accuracy && gps.accuracy > 100) {
+    status.textContent = `⚠️ 위치가 부정확해요 (오차 약 ${Math.round(gps.accuracy)}m)`;
+    status.style.display = 'block';
+  }
+  _hereCandidates = nearestPlaces(gps, 80, 3);
+  if (!_hereCandidates.length) {
+    noneBox.innerHTML = '여기는 처음이신가요? ' +
+      '<button class="view-btn" style="margin-top:6px;" onclick="startNewPlaceHere()">새 장소로 등록하기</button>';
+    noneBox.style.display = 'block';
+    return;
+  }
+  candBox.innerHTML = _hereCandidates.map((p, i) => {
+    const summary = placeVisitSummary(p.name);
+    return `<button onclick="selectHereCandidate(${i})" style="display:block;width:100%;text-align:left;
+      margin-bottom:6px;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--input-radius);
+      background:var(--card);color:var(--text);font-family:var(--font);font-size:13px;cursor:pointer;">
+      <strong>${p.name}</strong> · 약 ${p.dist}m${summary ? `<br><span style="font-size:12px;color:var(--text2);">${summary}</span>` : ''}
+    </button>`;
+  }).join('');
+  candBox.style.display = 'block';
+}
+
+function startNewPlaceHere() {
+  document.getElementById('placeInput').focus();
+  document.getElementById('placeInput').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+
+function selectHereCandidate(i) {
+  const p = _hereCandidates[i];
+  if (!p) return;
+  const place = _placeDB[p.name] || {};
+  const recent = place.recent || [];
+  const last = recent[recent.length - 1];
+  if (last && last.at) {
+    const diffMin = (new Date() - new Date(last.at)) / 60000;
+    if (diffMin >= 0 && diffMin < 30 && !confirm('30분 전에 여기 기록하셨어요. 또 남길까요?')) return;
+  }
+  const now = new Date();
+  const cat = place.cat || '';
+  const isRestaurant = cat === '식당';
+  const section = suggestSection(recent, now, cat);
+  const meal = (section === 'lunch' || section === 'dinner') ? section : (now.getHours() >= 17 || now.getHours() <= 3 ? 'dinner' : 'lunch');
+  _hereActive = { name: p.name, cat, isRestaurant, section, meal, note: '' };
+  document.getElementById('hereDetailTitle').textContent = `${p.name} — 뭘 기록할까요?`;
+  renderHereMealPick();
+  renderHereChips(recent);
+  document.getElementById('hereNoteInput').value = '';
+  document.getElementById('hereDetail').style.display = 'block';
+  document.getElementById('hereCandidates').style.display = 'none';
+  document.getElementById('hereNoneHint').style.display = 'none';
+  _hereDetailOpen = true;
+}
+
+function renderHereMealPick() {
+  const box = document.getElementById('hereMealPick');
+  if (!_hereActive || !_hereActive.isRestaurant) { box.style.display = 'none'; return; }
+  box.style.display = 'flex';
+  box.innerHTML = ['lunch', 'dinner'].map(m => {
+    const active = _hereActive.meal === m;
+    return `<button onclick="setHereMeal('${m}')" style="flex:1;padding:8px;border:1.5px solid var(--border);
+      border-radius:var(--input-radius);background:${active ? 'var(--btn-bg)' : 'var(--card)'};
+      color:${active ? 'var(--btn-text)' : 'var(--text)'};font-family:var(--font);font-size:13px;cursor:pointer;">
+      ${SECTION_LABELS[m]}</button>`;
+  }).join('');
+}
+function setHereMeal(m) {
+  if (!_hereActive) return;
+  _hereActive.meal = m;
+  _hereActive.section = m;
+  renderHereMealPick();
+}
+
+// 최근 기록 중 서로 다른 문구 최대 5개를 최신순으로 보여준다.
+// 식당은 meal 버튼이 section을 결정하므로 칩은 note 텍스트만 채워준다.
+function renderHereChips(recent) {
+  const box = document.getElementById('hereDetailChips');
+  const seen = new Set();
+  const items = [];
+  for (let i = recent.length - 1; i >= 0 && items.length < 5; i--) {
+    const r = recent[i];
+    if (!r || !r.note || seen.has(r.note)) continue;
+    seen.add(r.note);
+    items.push(r);
+  }
+  if (!items.length) {
+    box.innerHTML = '<span style="font-size:12px;color:var(--text2);">최근 기록 없음 — 직접 적어주세요</span>';
+    return;
+  }
+  _hereActive.chipItems = items;
+  const defaultIdx = _hereActive.isRestaurant ? -1 : items.findIndex(r => r.section === _hereActive.section);
+  box.innerHTML = items.map((r, i) => `
+    <button data-idx="${i}" onclick="pickHereChip(${i})" id="hereChip_${i}"
+      style="padding:6px 12px;border:1.5px solid ${i === defaultIdx ? 'var(--btn-bg)' : 'var(--border)'};
+      border-radius:20px;background:${i === defaultIdx ? 'var(--btn-bg)' : 'var(--card)'};
+      color:${i === defaultIdx ? 'var(--btn-text)' : 'var(--text)'};font-family:var(--font);font-size:12px;cursor:pointer;">
+      ${SECTION_LABELS[r.section] || r.section}: ${r.note}</button>`).join('');
+  if (defaultIdx >= 0) pickHereChip(defaultIdx);
+}
+
+function pickHereChip(i) {
+  if (!_hereActive || !_hereActive.chipItems) return;
+  const r = _hereActive.chipItems[i];
+  if (!r) return;
+  _hereActive.note = r.note || '';
+  if (!_hereActive.isRestaurant) _hereActive.section = r.section || _hereActive.section;
+  document.getElementById('hereNoteInput').value = _hereActive.note;
+  document.querySelectorAll('#hereDetailChips button').forEach((b, idx) => {
+    const on = idx === i;
+    b.style.background = on ? 'var(--btn-bg)' : 'var(--card)';
+    b.style.color = on ? 'var(--btn-text)' : 'var(--text)';
+    b.style.borderColor = on ? 'var(--btn-bg)' : 'var(--border)';
+  });
+}
+
+function cancelHereDetail() {
+  document.getElementById('hereDetail').style.display = 'none';
+  _hereActive = null;
+  _hereDetailOpen = false;
+  initHereCard();
+}
+
+function confirmHereRecord() {
+  if (!_hereActive) return;
+  const customNote = document.getElementById('hereNoteInput').value.trim();
+  const note = customNote || _hereActive.note || '';
+  const inputs = { place: _hereActive.name, section: _hereActive.section };
+  if (note) inputs.note = note;
+  if (_hereGPS) { inputs.lat = String(_hereGPS.lat); inputs.lng = String(_hereGPS.lng); }
+  if (_hereActive.isRestaurant) inputs.meal = _hereActive.meal;
+  dispatch(inputs);
+  document.getElementById('hereDetail').style.display = 'none';
+  _hereActive = null;
+  _hereDetailOpen = false;
+  initHereCard();
 }
 
 function closePlaceDropdown() {
@@ -1604,6 +1797,10 @@ if (getToken()) {
   loadPlacesFromGitHub();
 }
 updateStatus();
+initHereCard();
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') initHereCard();
+});
 const _urlDate = new URLSearchParams(location.search).get('date');
 if (_urlDate) loadDiary(_urlDate);
 </script>
